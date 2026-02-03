@@ -1,0 +1,52 @@
+name: Update Homebrew Formula
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-formula:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get release version
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Updating formula for version $VERSION"
+
+      - name: Download binaries and compute SHA256
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          REPO="${{ github.repository }}"
+          FORMULA="homebrew/wtree.rb"
+          
+          platforms=("darwin-arm64" "darwin-x64" "linux-arm64" "linux-x64")
+          
+          for platform in "${platforms[@]}"; do
+            url="https://github.com/${REPO}/releases/download/v${VERSION}/wtree-${platform}"
+            echo "Downloading $platform..."
+            sha256=$(curl -fsSL "$url" | sha256sum | cut -d' ' -f1)
+            
+            placeholder="PLACEHOLDER_SHA256_${platform^^}"
+            placeholder="${placeholder//-/_}"
+            
+            sed -i "s/${placeholder}/${sha256}/g" "$FORMULA"
+            echo "  $platform: $sha256"
+          done
+          
+          # Update version
+          sed -i "s/version \"[^\"]*\"/version \"${VERSION}\"/g" "$FORMULA"
+
+      - name: Commit and push formula update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add homebrew/wtree.rb
+          git commit -m "chore: update homebrew formula for v${{ steps.get_version.outputs.version }}"
+          git push
