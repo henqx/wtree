@@ -104,6 +104,26 @@ export const RECIPES: Recipe[] = [
     },
   },
 
+  // Python with Poetry
+  {
+    name: "poetry",
+    detect: ["poetry.lock"],
+    config: {
+      cache: [".venv"],
+      post_restore: undefined,
+    },
+  },
+
+  // Python with PDM
+  {
+    name: "pdm",
+    detect: ["pdm.lock"],
+    config: {
+      cache: [".venv", "__pypackages__"],
+      post_restore: undefined,
+    },
+  },
+
   // Python with pip (requirements.txt + existing .venv)
   {
     name: "python-pip",

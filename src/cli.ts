@@ -1,7 +1,7 @@
 import { parseArgs } from "util";
 import type { ParsedArgs } from "./types.ts";
 
-const COMMANDS = ["add", "restore", "analyze", "remove", "help", "version"] as const;
+const COMMANDS = ["add", "restore", "analyze", "remove", "list", "help", "version"] as const;
 type Command = (typeof COMMANDS)[number];
 
 /**
@@ -93,6 +93,7 @@ COMMANDS:
   add <path> [branch]   Create a new worktree with cached artifacts
   restore <path>        Restore artifacts to an existing worktree
   analyze               Show detected configuration for current directory
+  list                  Show all worktrees with cache status
   remove <path>         Remove a worktree
 
 OPTIONS:

@@ -2,6 +2,7 @@ import { resolve, basename, relative, dirname } from "path";
 import { realpath } from "fs/promises";
 import type { AddResult, ParsedArgs } from "../types.ts";
 import { WtreeError, ErrorCode } from "../types.ts";
+import { color } from "../color.ts";
 import {
   getWorktreeRoot,
   findWorktreeByBranch,
@@ -160,31 +161,31 @@ export async function add(args: ParsedArgs): Promise<AddResult> {
 export function formatAddResult(result: AddResult): string {
   const lines: string[] = [];
 
-  lines.push(`Created worktree at ${result.worktree.path}`);
-  lines.push(`  Branch: ${result.worktree.branch}`);
-  lines.push(`  Source: ${result.source.path} (${result.source.branch})`);
+  lines.push(`${color.success("✓")} Created worktree at ${color.bold(result.worktree.path)}`);
+  lines.push(`  ${color.muted("Branch:")} ${result.worktree.branch}`);
+  lines.push(`  ${color.muted("Source:")} ${result.source.path} (${result.source.branch})`);
 
   if (result.recipe) {
-    lines.push(`  Recipe: ${result.recipe}`);
+    lines.push(`  ${color.muted("Recipe:")} ${result.recipe}`);
   }
 
   if (result.artifacts.copied.length > 0) {
-    lines.push(`  Artifacts copied: ${result.artifacts.copied.length}`);
+    lines.push(`  ${color.muted("Artifacts:")} ${color.success(String(result.artifacts.copied.length))} copied`);
     for (const artifact of result.artifacts.copied.slice(0, 5)) {
-      lines.push(`    - ${artifact}`);
+      lines.push(`    ${color.green("+")} ${artifact}`);
     }
     if (result.artifacts.copied.length > 5) {
-      lines.push(`    ... and ${result.artifacts.copied.length - 5} more`);
+      lines.push(`    ${color.muted(`... and ${result.artifacts.copied.length - 5} more`)}`);
     }
   } else if (result.artifacts.patterns.length > 0) {
-    lines.push(`  No artifacts found to copy (patterns: ${result.artifacts.patterns.join(", ")})`);
+    lines.push(`  ${color.muted("No artifacts found to copy")}`);
   } else {
-    lines.push(`  No artifact caching configured`);
+    lines.push(`  ${color.muted("No artifact caching configured")}`);
   }
 
   if (result.warning) {
     lines.push("");
-    lines.push(`Warning: ${result.warning}`);
+    lines.push(`${color.warning("⚠")} ${color.yellow(result.warning)}`);
   }
 
   return lines.join("\n");

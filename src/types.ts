@@ -135,6 +135,23 @@ export interface RemoveResult {
 }
 
 /**
+ * Result of the list command
+ */
+export interface ListResult {
+  success: true;
+  worktrees: {
+    path: string;
+    branch: string;
+    current: boolean;
+    recipe?: string;
+    artifacts: {
+      pattern: string;
+      exists: boolean;
+    }[];
+  }[];
+}
+
+/**
  * Error result for JSON output
  */
 export interface ErrorResult {
@@ -151,13 +168,14 @@ export type CommandResult =
   | RestoreResult
   | AnalyzeResult
   | RemoveResult
+  | ListResult
   | ErrorResult;
 
 /**
  * CLI parsed arguments
  */
 export interface ParsedArgs {
-  command: "add" | "restore" | "analyze" | "remove" | "help" | "version";
+  command: "add" | "restore" | "analyze" | "remove" | "list" | "help" | "version";
   positional: string[];
   flags: {
     branch?: string;

@@ -3,11 +3,13 @@
 import { parse, printHelp, printVersion } from "./cli.ts";
 import { WtreeError, ErrorCode } from "./types.ts";
 import type { CommandResult, ErrorResult } from "./types.ts";
+import { color } from "./color.ts";
 
 import { analyze, formatAnalyzeResult } from "./commands/analyze.ts";
 import { add, formatAddResult } from "./commands/add.ts";
 import { restore, formatRestoreResult } from "./commands/restore.ts";
 import { remove, formatRemoveResult } from "./commands/remove.ts";
+import { list, formatListResult } from "./commands/list.ts";
 
 /**
  * Main entry point
@@ -51,6 +53,11 @@ async function main(): Promise<void> {
         humanOutput = formatRemoveResult(result);
         break;
 
+      case "list":
+        result = await list(args);
+        humanOutput = formatListResult(result);
+        break;
+
       default:
         printHelp();
         process.exit(1);
@@ -73,7 +80,7 @@ async function main(): Promise<void> {
       console.log(JSON.stringify(errorResult, null, 2));
       process.exit(1);
     } else {
-      console.error(`Error: ${errorResult.message}`);
+      console.error(`${color.error("✗")} ${color.red(errorResult.message)}`);
       process.exit(1);
     }
   }

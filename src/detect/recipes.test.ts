@@ -15,6 +15,8 @@ describe("recipes", () => {
       expect(names).toContain("rush");
       expect(names).toContain("lerna");
       expect(names).toContain("python-uv");
+      expect(names).toContain("poetry");
+      expect(names).toContain("pdm");
       expect(names).toContain("python-pip");
       expect(names).toContain("rust");
       expect(names).toContain("go");
@@ -135,6 +137,16 @@ describe("recipes", () => {
       const lerna = getRecipeByName("lerna");
       expect(lerna?.detect).toContain("lerna.json");
     });
+
+    test("poetry detects poetry.lock", () => {
+      const poetry = getRecipeByName("poetry");
+      expect(poetry?.detect).toContain("poetry.lock");
+    });
+
+    test("pdm detects pdm.lock", () => {
+      const pdm = getRecipeByName("pdm");
+      expect(pdm?.detect).toContain("pdm.lock");
+    });
   });
 
   describe("recipe cache patterns", () => {
@@ -153,10 +165,16 @@ describe("recipes", () => {
     });
 
     test("python recipes cache .venv", () => {
-      for (const name of ["python-uv", "python-pip"]) {
+      for (const name of ["python-uv", "python-pip", "poetry"]) {
         const recipe = getRecipeByName(name);
         expect(recipe?.config.cache).toContain(".venv");
       }
+    });
+
+    test("pdm caches .venv and __pypackages__", () => {
+      const pdm = getRecipeByName("pdm");
+      expect(pdm?.config.cache).toContain(".venv");
+      expect(pdm?.config.cache).toContain("__pypackages__");
     });
 
     test("rust caches target", () => {

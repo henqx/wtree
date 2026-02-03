@@ -7,6 +7,7 @@ import {
   removeWorktree,
   getCurrentWorktree,
 } from "../git.ts";
+import { color } from "../color.ts";
 
 /**
  * Remove command - remove a worktree
@@ -60,5 +61,5 @@ export async function remove(args: ParsedArgs): Promise<RemoveResult> {
  * Format remove result for human output
  */
 export function formatRemoveResult(result: RemoveResult): string {
-  return `Removed worktree at ${result.removed.path} (branch: ${result.removed.branch})`;
+  return `${color.success("✓")} Removed worktree at ${color.bold(result.removed.path)} ${color.muted(`(${result.removed.branch})`)}`;
 }

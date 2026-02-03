@@ -5,6 +5,7 @@ import { getWorktreeRoot, findWorktreeByBranch, listWorktrees } from "../git.ts"
 import { detectConfig } from "../detect/index.ts";
 import { copyArtifacts, runPostRestore } from "../copy.ts";
 import { stat } from "fs/promises";
+import { color } from "../color.ts";
 
 /**
  * Check if a path is a valid worktree
@@ -104,23 +105,23 @@ export async function restore(args: ParsedArgs): Promise<RestoreResult> {
 export function formatRestoreResult(result: RestoreResult): string {
   const lines: string[] = [];
 
-  lines.push(`Restored artifacts to ${result.target.path}`);
-  lines.push(`  Source: ${result.source.path}`);
+  lines.push(`${color.success("✓")} Restored artifacts to ${color.bold(result.target.path)}`);
+  lines.push(`  ${color.muted("Source:")} ${result.source.path}`);
 
   if (result.recipe) {
-    lines.push(`  Recipe: ${result.recipe}`);
+    lines.push(`  ${color.muted("Recipe:")} ${result.recipe}`);
   }
 
   if (result.artifacts.copied.length > 0) {
-    lines.push(`  Artifacts copied: ${result.artifacts.copied.length}`);
+    lines.push(`  ${color.muted("Artifacts:")} ${color.success(String(result.artifacts.copied.length))} copied`);
     for (const artifact of result.artifacts.copied.slice(0, 5)) {
-      lines.push(`    - ${artifact}`);
+      lines.push(`    ${color.green("+")} ${artifact}`);
     }
     if (result.artifacts.copied.length > 5) {
-      lines.push(`    ... and ${result.artifacts.copied.length - 5} more`);
+      lines.push(`    ${color.muted(`... and ${result.artifacts.copied.length - 5} more`)}`);
     }
   } else {
-    lines.push(`  No new artifacts to copy`);
+    lines.push(`  ${color.muted("No new artifacts to copy")}`);
   }
 
   return lines.join("\n");

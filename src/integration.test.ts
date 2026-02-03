@@ -257,6 +257,33 @@ describe("integration: analyze", () => {
     expect(result.config.cache).toContain("dist");
   });
 
+  test("detects poetry project", async () => {
+    repo = await createTestRepo({
+      "poetry.lock": "",
+      "pyproject.toml": "[tool.poetry]\nname = 'test'\n",
+    });
+
+    const result = await wtree(["analyze"], repo.root);
+
+    expect(result.success).toBe(true);
+    expect(result.detection.recipe).toBe("poetry");
+    expect(result.config.cache).toContain(".venv");
+  });
+
+  test("detects pdm project", async () => {
+    repo = await createTestRepo({
+      "pdm.lock": "",
+      "pyproject.toml": "[tool.pdm]\n",
+    });
+
+    const result = await wtree(["analyze"], repo.root);
+
+    expect(result.success).toBe(true);
+    expect(result.detection.recipe).toBe("pdm");
+    expect(result.config.cache).toContain(".venv");
+    expect(result.config.cache).toContain("__pypackages__");
+  });
+
   test("returns none when no config detected", async () => {
     repo = await createTestRepo({
       "README.md": "# Test",

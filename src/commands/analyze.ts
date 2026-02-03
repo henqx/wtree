@@ -1,6 +1,7 @@
 import type { AnalyzeResult, ParsedArgs } from "../types.ts";
 import { getWorktreeRoot } from "../git.ts";
 import { detectConfig } from "../detect/index.ts";
+import { color } from "../color.ts";
 
 /**
  * Analyze command - show detected configuration
@@ -28,43 +29,44 @@ export async function analyze(args: ParsedArgs): Promise<AnalyzeResult> {
 export function formatAnalyzeResult(result: AnalyzeResult): string {
   const lines: string[] = [];
 
-  lines.push("Detection Results");
-  lines.push("=================");
+  lines.push(color.bold("Detection Results"));
   lines.push("");
 
   switch (result.detection.method) {
     case "explicit":
-      lines.push("Method: Explicit configuration (.wtree.yaml)");
+      lines.push(`${color.muted("Method:")} ${color.cyan("Explicit")} ${color.muted("(.wtree.yaml)")}`);
       break;
     case "recipe":
-      lines.push(`Method: Built-in recipe (${result.detection.recipe})`);
+      lines.push(`${color.muted("Method:")} ${color.cyan("Recipe")} ${color.muted(`(${result.detection.recipe})`)}`);
       break;
     case "gitignore":
-      lines.push("Method: Inferred from .gitignore");
+      lines.push(`${color.muted("Method:")} ${color.cyan("Inferred")} ${color.muted("(from .gitignore)")}`);
       break;
     case "none":
-      lines.push("Method: No configuration detected");
+      lines.push(`${color.muted("Method:")} ${color.yellow("None detected")}`);
       break;
   }
 
   if (result.files?.detected) {
-    lines.push(`Detected files: ${result.files.detected.join(", ")}`);
+    lines.push(`${color.muted("Detected:")} ${result.files.detected.join(", ")}`);
   }
 
   lines.push("");
 
   if (result.config) {
-    lines.push("Configuration");
-    lines.push("-------------");
-    lines.push(`Cache patterns: ${result.config.cache.join(", ")}`);
+    lines.push(color.bold("Cache Patterns"));
+    for (const pattern of result.config.cache) {
+      lines.push(`  ${color.green("•")} ${pattern}`);
+    }
     if (result.config.post_restore) {
-      lines.push(`Post-restore: ${result.config.post_restore}`);
+      lines.push("");
+      lines.push(`${color.muted("Post-restore:")} ${result.config.post_restore}`);
     }
   } else {
-    lines.push("No artifacts would be cached.");
+    lines.push(color.yellow("No artifacts would be cached."));
     lines.push("");
-    lines.push("To configure caching, create a .wtree.yaml file or use a");
-    lines.push("supported project structure (pnpm, npm, yarn, rust, etc.).");
+    lines.push(color.muted("To configure caching, create a .wtree.yaml file or use a"));
+    lines.push(color.muted("supported project structure (pnpm, npm, yarn, rust, etc.)."));
   }
 
   return lines.join("\n");
