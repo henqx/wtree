@@ -19,22 +19,16 @@ wtree add ../feature-branch
 
 ## Installation
 
-### Homebrew (macOS/Linux)
-
-```bash
-brew install anthropics/wtree/wtree
-```
-
 ### Curl installer
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/anthropics/wtree/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/henqx/wtree/main/scripts/install.sh | bash
 ```
 
 ### Build from source (requires Bun)
 
 ```bash
-git clone https://github.com/anthropics/wtree
+git clone https://github.com/henqx/wtree
 cd wtree
 bun install
 bun run build
