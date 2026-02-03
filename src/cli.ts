@@ -1,7 +1,7 @@
 import { parseArgs } from "util";
 import type { ParsedArgs } from "./types.ts";
 
-const COMMANDS = ["add", "restore", "analyze", "remove", "list", "help", "version"] as const;
+const COMMANDS = ["add", "restore", "analyze", "remove", "list", "init", "doctor", "clean", "help", "version"] as const;
 type Command = (typeof COMMANDS)[number];
 
 /**
@@ -62,6 +62,18 @@ export function parse(args: string[]): ParsedArgs {
         type: "boolean",
         default: false,
       },
+      "no-progress": {
+        type: "boolean",
+        default: false,
+      },
+      "dry-run": {
+        type: "boolean",
+        default: false,
+      },
+      "no-reflinks": {
+        type: "boolean",
+        default: false,
+      },
     },
     allowPositionals: true,
   });
@@ -76,6 +88,9 @@ export function parse(args: string[]): ParsedArgs {
       help: values.help ?? false,
       version: false,
       force: values.force,
+      noProgress: values["no-progress"] ?? false,
+      dryRun: values["dry-run"] ?? false,
+      noReflinks: values["no-reflinks"] ?? false,
     },
   };
 }
@@ -93,6 +108,9 @@ COMMANDS:
   add <path> [branch]   Create a new worktree with cached artifacts
   restore <path>        Restore artifacts to an existing worktree (auto-detects source)
   analyze               Show detected configuration for current directory
+  init                  Generate .wtree.yaml interactively
+  doctor                Diagnose common issues and configuration problems
+  clean                 Remove orphaned cache artifacts
   list                  Show all worktrees with cache status
   remove <path>         Remove a worktree
 
@@ -101,6 +119,9 @@ OPTIONS:
   --from, -f <source>    Source worktree to copy artifacts from
   --json                 Output results as JSON (for agent integration)
   --force                Force operation (e.g., force remove)
+  --no-progress          Disable progress indicators for copies
+  --no-reflinks          Disable APFS reflinks (macOS copy-on-write)
+  --dry-run              Show what would be cleaned without making changes
   --help, -h             Show this help message
   --version, -v          Show version
 
@@ -115,10 +136,13 @@ EXAMPLES:
   wtree add .worktrees/hotfix -b hotfix-123 # explicit new branch
 
    # Other commands
-   wtree restore ./my-worktree              # auto-detect source
-   wtree restore ./my-worktree --from main  # explicit source
-  wtree analyze --json
-  wtree remove .worktrees/feature-x
+    wtree restore ./my-worktree              # auto-detect source
+    wtree restore ./my-worktree --from main  # explicit source
+   wtree init                               # generate .wtree.yaml
+   wtree doctor                             # diagnose configuration
+   wtree clean --dry-run                    # preview orphaned artifacts
+   wtree analyze --json
+   wtree remove .worktrees/feature-x
 
 CONFIGURATION:
   Create a .wtree.yaml file in your repository root:

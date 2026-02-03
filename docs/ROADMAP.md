@@ -92,7 +92,7 @@ The goal: **works for Node.js projects on macOS/Linux**.
 - [ ] `wtree init` - Generate .wtree.yaml interactively
 - [ ] `wtree doctor` - Diagnose common issues
 - [x] Colored output
-- [ ] Progress indicators for long copies
+- [x] Progress indicators for long copies
 
 ### Documentation
 - [ ] Man page
@@ -105,12 +105,12 @@ The goal: **works for Node.js projects on macOS/Linux**.
 
 ### Performance
 - [ ] Parallel hardlink operations for monorepos
-- [ ] Copy-on-write support (APFS `cp -c`, Btrfs reflinks)
+- [x] Copy-on-write support (APFS `cp -c`, Btrfs reflinks)
 - [ ] Lockfile hash comparison (skip post_restore if unchanged)
 
 ### Advanced
 - [x] `wtree list` - Show all worktrees with cache status
-- [ ] `wtree clean` - Remove orphaned cache artifacts
+- [x] `wtree clean` - Remove orphaned cache artifacts
 - [ ] Worktree templates (pre-configured setups)
 
 ---

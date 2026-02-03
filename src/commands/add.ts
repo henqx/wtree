@@ -12,6 +12,7 @@ import {
 } from "../git.ts";
 import { detectConfig } from "../detect/index.ts";
 import { copyArtifacts, runPostRestore } from "../copy.ts";
+import { ProgressTracker, shouldShowProgress } from "../progress.ts";
 
 /**
  * Resolve path with symlinks, handling non-existent paths by walking up to first existing ancestor
@@ -124,11 +125,24 @@ export async function add(args: ParsedArgs): Promise<AddResult> {
   // Copy artifacts if config was detected
   let copiedArtifacts: string[] = [];
   if (detection.config) {
+    // Setup progress tracking
+    const showProgress = shouldShowProgress(args);
+    const progress = new ProgressTracker({
+      enabled: showProgress,
+      total: detection.config.cache.length,
+      label: "copying artifacts",
+    });
+
     copiedArtifacts = await copyArtifacts(
       sourceWorktree.path,
       targetPath,
-      detection.config.cache
+      detection.config.cache,
+      (current, total, path) => {
+        progress.update(current, path);
+      },
+      { useReflink: !args.flags.noReflinks }
     );
+    progress.finish(`${copiedArtifacts.length} artifacts`);
 
     // Run post_restore if defined
     if (detection.config.post_restore) {

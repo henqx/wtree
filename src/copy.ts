@@ -1,7 +1,7 @@
 import { WtreeError, ErrorCode } from "./types.ts";
 import { Glob } from "bun";
 import { join, dirname, relative, basename } from "path";
-import { stat, mkdir } from "fs/promises";
+import { stat, mkdir, writeFile, unlink } from "fs/promises";
 
 /**
  * Check if a path exists
@@ -32,6 +32,77 @@ async function exec(
   const exitCode = await proc.exited;
 
   return { success: exitCode === 0, stderr };
+}
+
+// Cache for reflink support check
+let reflinkSupported: boolean | undefined;
+
+/**
+ * Check if the filesystem supports reflinks (copy-on-write)
+ * Only relevant for macOS with APFS
+ */
+export async function isReflinkSupported(dir: string): Promise<boolean> {
+  // Only check on macOS
+  if (process.platform !== "darwin") {
+    return false;
+  }
+
+  // Return cached result if available
+  if (reflinkSupported !== undefined) {
+    return reflinkSupported;
+  }
+
+  // Test by creating a small file and trying to clone it
+  const testFile = join(dir, `.wtree_reflink_test_${Date.now()}`);
+  const testClone = `${testFile}_clone`;
+
+  try {
+    // Create test file
+    await writeFile(testFile, "test");
+    
+    // Try to clone it using cp -c (macOS reflink flag)
+    const result = await exec(["cp", "-c", testFile, testClone]);
+    
+    // Clean up test files
+    try { await unlink(testFile); } catch {}
+    try { await unlink(testClone); } catch {}
+    
+    reflinkSupported = result.success;
+    return reflinkSupported;
+  } catch {
+    // Clean up on error
+    try { await unlink(testFile); } catch {}
+    try { await unlink(testClone); } catch {}
+    
+    reflinkSupported = false;
+    return false;
+  }
+}
+
+/**
+ * Copy a file or directory using copy-on-write (reflink) if available
+ * Falls back to hardlinks if reflinks aren't supported
+ */
+export async function reflinkCopy(src: string, dest: string): Promise<void> {
+  // Ensure parent directory exists
+  const parentDir = dirname(dest);
+  await mkdir(parentDir, { recursive: true });
+
+  // Check if reflinks are supported
+  const useReflink = await isReflinkSupported(parentDir);
+
+  if (useReflink) {
+    // Use macOS reflink clone: cp -c (copy with cloning)
+    const result = await exec(["cp", "-c", src, dest]);
+    
+    if (result.success) {
+      return;
+    }
+    // If reflink fails, fall through to hardlink fallback
+  }
+
+  // Fall back to hardlink copy
+  await hardlinkCopy(src, dest);
 }
 
 /**
@@ -102,7 +173,9 @@ function deduplicatePaths(paths: string[]): string[] {
 export async function copyArtifacts(
   sourceRoot: string,
   destRoot: string,
-  patterns: string[]
+  patterns: string[],
+  onProgress?: (current: number, total: number, path: string) => void,
+  options?: { useReflink?: boolean }
 ): Promise<string[]> {
   const allMatches: string[] = [];
 
@@ -115,11 +188,21 @@ export async function copyArtifacts(
   // Deduplicate - don't copy children if parent is already being copied
   const toCopy = deduplicatePaths(allMatches);
   const copied: string[] = [];
+  const total = toCopy.length;
+
+  // Determine copy method
+  const shouldUseReflink = options?.useReflink !== false;
 
   // Copy each matched path
-  for (const relativePath of toCopy) {
+  for (let i = 0; i < toCopy.length; i++) {
+    const relativePath = toCopy[i];
     const srcPath = join(sourceRoot, relativePath);
     const destPath = join(destRoot, relativePath);
+
+    // Report progress before processing
+    if (onProgress) {
+      onProgress(i, total, relativePath);
+    }
 
     // Skip if source doesn't exist
     if (!(await exists(srcPath))) {
@@ -132,7 +215,11 @@ export async function copyArtifacts(
     }
 
     try {
-      await hardlinkCopy(srcPath, destPath);
+      if (shouldUseReflink) {
+        await reflinkCopy(srcPath, destPath);
+      } else {
+        await hardlinkCopy(srcPath, destPath);
+      }
       copied.push(relativePath);
     } catch (error) {
       // Log but continue - some artifacts might fail to copy
@@ -140,6 +227,11 @@ export async function copyArtifacts(
         console.error(`Warning: ${error.message}`);
       }
     }
+  }
+
+  // Report completion
+  if (onProgress) {
+    onProgress(total, total, "done");
   }
 
   return copied;

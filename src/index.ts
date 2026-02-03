@@ -10,6 +10,9 @@ import { add, formatAddResult } from "./commands/add.ts";
 import { restore, formatRestoreResult } from "./commands/restore.ts";
 import { remove, formatRemoveResult } from "./commands/remove.ts";
 import { list, formatListResult } from "./commands/list.ts";
+import { init, formatInitResult } from "./commands/init.ts";
+import { doctor, formatDoctorResult } from "./commands/doctor.ts";
+import { clean, formatCleanResult } from "./commands/clean.ts";
 
 /**
  * Main entry point
@@ -56,6 +59,21 @@ async function main(): Promise<void> {
       case "list":
         result = await list(args);
         humanOutput = formatListResult(result);
+        break;
+
+      case "init":
+        result = await init(args);
+        humanOutput = formatInitResult(result);
+        break;
+
+      case "doctor":
+        result = await doctor(args);
+        humanOutput = formatDoctorResult(result);
+        break;
+
+      case "clean":
+        result = await clean(args);
+        humanOutput = formatCleanResult(result);
         break;
 
       default:

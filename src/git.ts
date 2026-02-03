@@ -2,6 +2,16 @@ import type { Worktree } from "./types.ts";
 import { WtreeError, ErrorCode } from "./types.ts";
 
 /**
+ * Execute a git command and return stdout
+ */
+export async function gitCommand(
+  args: string[],
+  cwd?: string
+): Promise<string> {
+  return exec(["git", ...args], { cwd });
+}
+
+/**
  * Execute a command and return stdout
  */
 async function exec(

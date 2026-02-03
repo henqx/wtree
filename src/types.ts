@@ -158,6 +158,59 @@ export interface ListResult {
 }
 
 /**
+ * Result of the init command
+ */
+export interface InitResult {
+  success: true;
+  created: boolean;
+  path: string;
+  message?: string;
+  suggestion?: string;
+  recipe?: string;
+  customCache?: string[];
+  config?: Config;
+}
+
+/**
+ * Result of the doctor command
+ */
+export interface DoctorResult {
+  success: true;
+  healthy: boolean;
+  checks: {
+    name: string;
+    status: "ok" | "warning" | "error";
+    message: string;
+    suggestion?: string;
+  }[];
+  summary: {
+    total: number;
+    ok: number;
+    warnings: number;
+    errors: number;
+  };
+}
+
+/**
+ * Result of the clean command
+ */
+export interface CleanResult {
+  success: true;
+  dryRun: boolean;
+  items: {
+    type: "file" | "directory" | "worktree";
+    path: string;
+    reason: string;
+  }[];
+  summary: {
+    total: number;
+    cleaned: number;
+    pruned: number;
+    size: number;
+  };
+}
+
+/**
  * Error result for JSON output
  */
 export interface ErrorResult {
@@ -175,13 +228,16 @@ export type CommandResult =
   | AnalyzeResult
   | RemoveResult
   | ListResult
+  | InitResult
+  | DoctorResult
+  | CleanResult
   | ErrorResult;
 
 /**
  * CLI parsed arguments
  */
 export interface ParsedArgs {
-  command: "add" | "restore" | "analyze" | "remove" | "list" | "help" | "version";
+  command: "add" | "restore" | "analyze" | "remove" | "list" | "init" | "doctor" | "clean" | "help" | "version";
   positional: string[];
   flags: {
     branch?: string;
@@ -190,6 +246,9 @@ export interface ParsedArgs {
     help: boolean;
     version: boolean;
     force?: boolean;
+    noProgress?: boolean;
+    dryRun?: boolean;
+    noReflinks?: boolean;
   };
 }
 

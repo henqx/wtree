@@ -11,6 +11,7 @@ import { detectConfig } from "../detect/index.ts";
 import { copyArtifacts, runPostRestore } from "../copy.ts";
 import { stat } from "fs/promises";
 import { color } from "../color.ts";
+import { ProgressTracker, shouldShowProgress } from "../progress.ts";
 
 /**
  * Check if a path is a valid worktree
@@ -83,12 +84,25 @@ export async function restore(args: ParsedArgs): Promise<RestoreResult> {
     );
   }
 
+  // Setup progress tracking
+  const showProgress = shouldShowProgress(args);
+  const progress = new ProgressTracker({
+    enabled: showProgress,
+    total: detection.config.cache.length,
+    label: "copying artifacts",
+  });
+
   // Copy artifacts
   const copiedArtifacts = await copyArtifacts(
     sourceWorktree.path,
     targetPath,
-    detection.config.cache
+    detection.config.cache,
+    (current, total, path) => {
+      progress.update(current, path);
+    },
+    { useReflink: !args.flags.noReflinks }
   );
+  progress.finish(`${copiedArtifacts.length} artifacts`);
 
   // Run post_restore if defined
   if (detection.config.post_restore) {

@@ -1,0 +1,239 @@
+.TH WTREE 1 "February 2025" "wtree 0.3.0" "User Commands"
+.SH NAME
+wtree \- accelerate git worktree creation with cached build artifacts
+.SH SYNOPSIS
+.B wtree
+.RI [ COMMAND ]
+.RI [ OPTIONS ]
+.SH DESCRIPTION
+.B wtree
+accelerates git worktree creation by caching and hardlinking build artifacts. It eliminates the setup time for parallel workflows, making it ideal for AI coding agents and parallel development.
+
+When you create a git worktree, you get a fresh working directory\, but build caches, package managers, and virtual environments need to be recreated from scratch. wtree solves this by hardlinking (and on macOS APFS, using copy-on-write reflinks) the artifacts from an existing worktree.
+
+.SH COMMANDS
+.TP
+.B add \fIpath\fR [\fIbranch\fR]
+Create a new worktree with cached artifacts. If branch is not specified, it is inferred from the path basename. Supports \fB-b\fR flag to explicitly create a new branch.
+
+.TP
+.B restore \fIpath\fR
+Restore artifacts to an existing worktree. Auto-detects the best source worktree unless \fB--from\fR is specified.
+
+.TP
+.B analyze
+Show detected configuration for the current directory. Displays which recipe or detection method is being used.
+
+.TP
+.B init
+Generate a \fI.wtree.yaml\fR file interactively based on detected project type.
+
+.TP
+.B doctor
+Diagnose common issues and configuration problems. Checks git repository, permissions, nested worktrees, and configuration validity.
+
+.TP
+.B clean
+Remove orphaned cache artifacts and stale worktree references. Supports \fB--dry-run\fR to preview changes.
+
+.TP
+.B list
+Show all worktrees with cache status. Displays which artifacts exist in each worktree.
+
+.TP
+.B remove \fIpath\fR
+Remove a worktree. Use \fB--force\fR to remove even if the worktree has uncommitted changes.
+
+.SH OPTIONS
+.TP
+.B \-b \fIbranch\fR, \fB--branch\fR \fIbranch\fR
+Create a new branch with the given name (used with \fBadd\fR command).
+
+.TP
+.B \-f \fIsource\fR, \fB--from\fR \fIsource\fR
+Source worktree to copy artifacts from (used with \fBadd\fR and \fBrestore\fR commands).
+
+.TP
+.B \-\-json
+Output results as JSON for programmatic integration.
+
+.TP
+.B \-\-force
+Force operation. For \fBremove\fR, deletes the worktree even with uncommitted changes.
+
+.TP
+.B \-\-no-progress
+Disable progress indicators for long copy operations.
+
+.TP
+.B \-\-no-reflinks
+Disable APFS copy-on-write (reflink) support on macOS. Use traditional hardlinks instead.
+
+.TP
+.B \-\-dry-run
+Show what would be cleaned without making changes (used with \fBclean\fR command).
+
+.TP
+.B \-h, \-\-help
+Show help message and exit.
+
+.TP
+.B \-v, \-\-version
+Show version information and exit.
+
+.SH CONFIGURATION
+wtree can be configured via a \fI.wtree.yaml\fR file in the repository root:
+
+.PP
+.RS
+.nf
+# Extend a built-in recipe
+extends: pnpm
+
+# Add custom cache patterns
+cache:
+  - .next
+  - dist
+  - build
+
+# Command to run after restoring artifacts
+post_restore: npm install --frozen-lockfile
+.fi
+.RE
+.PP
+
+.SH BUILT-IN RECIPES
+.TP
+.B JavaScript/Node.js
+pnpm, npm, yarn, bun, pnpm-workspaces
+
+.TP
+.B Monorepo Tools
+turborepo, nx, rush, lerna
+
+.TP
+.B Python
+python-uv, poetry, pdm, python-pip
+
+.TP
+.B Other Languages
+rust (Cargo), go (Go modules)
+
+.SH EXAMPLES
+.SS Creating Worktrees
+Create a new worktree with inferred branch name:
+.PP
+.RS
+.B wtree add ../feature-x
+.RE
+
+Create a worktree with explicit branch:
+.PP
+.RS
+.B wtree add -b feature-x ../feature-x
+.RE
+
+Create a worktree from existing branch:
+.PP
+.RS
+.B wtree add ../hotfix main
+.RE
+
+Use nested worktree pattern:
+.PP
+.RS
+.B wtree add .worktrees/experiment
+.RE
+
+.SS Restoring Artifacts
+Restore artifacts to existing worktree (auto-detect source):
+.PP
+.RS
+.B wtree restore ../feature-x
+.RE
+
+Restore from specific worktree:
+.PP
+.RS
+.B wtree restore ../experiment --from main
+.RE
+
+.SS Configuration Management
+Generate configuration file:
+.PP
+.RS
+.B wtree init
+.RE
+
+Check configuration:
+.PP
+.RS
+.B wtree analyze
+.RE
+
+Diagnose issues:
+.PP
+.RS
+.B wtree doctor
+.RE
+
+.SS Maintenance
+List all worktrees:
+.PP
+.RS
+.B wtree list
+.RE
+
+Preview orphaned artifacts:
+.PP
+.RS
+.B wtree clean --dry-run
+.RE
+
+Remove worktree:
+.PP
+.RS
+.B wtree remove ../feature-x
+.RE
+
+.SH ENVIRONMENT
+.TP
+.B CI
+When set, disables progress indicators automatically.
+
+.TP
+.B GITHUB_TOKEN
+Used by CI workflows for creating releases.
+
+.SH FILES
+.TP
+.I .wtree.yaml
+Configuration file in repository root defining cache patterns and recipes.
+
+.TP
+.I .gitignore
+Should include patterns like \fI.worktrees/\fR when using nested worktrees.
+
+.SH EXIT STATUS
+.TP
+.B 0
+Success
+.TP
+.B 1
+General error or invalid arguments
+.TP
+.B 2
+Git operation failed
+
+.SH SEE ALSO
+.BR git-worktree (1),
+.BR git (1)
+
+.SH AUTHOR
+Written by henqx.
+
+.SH BUGS
+Report bugs at: https://github.com/henqx/wtree/issues
+
+.SH COPYRIGHT
+MIT License. See https://github.com/henqx/wtree for full license text.
