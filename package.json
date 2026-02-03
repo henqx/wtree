@@ -3,16 +3,47 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Accelerate git worktree creation with hardlinked build artifacts",
-  "main": "src/index.ts",
-  "bin": {
-    "wtree": "src/index.ts"
+  "author": "Anthropic",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anthropics/wtree.git"
   },
+  "bugs": {
+    "url": "https://github.com/anthropics/wtree/issues"
+  },
+  "homepage": "https://github.com/anthropics/wtree#readme",
+  "keywords": [
+    "git",
+    "worktree",
+    "cache",
+    "hardlink",
+    "cli",
+    "monorepo",
+    "ai-agents",
+    "bun"
+  ],
+  "bin": {
+    "wtree": "./bin/wtree.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md"
+  ],
   "scripts": {
     "dev": "bun run src/index.ts",
     "build": "bun build src/index.ts --compile --outfile wtree",
     "build:linux-x64": "bun build src/index.ts --compile --target=bun-linux-x64 --outfile dist/wtree-linux-x64",
+    "build:linux-arm64": "bun build src/index.ts --compile --target=bun-linux-arm64 --outfile dist/wtree-linux-arm64",
+    "build:darwin-x64": "bun build src/index.ts --compile --target=bun-darwin-x64 --outfile dist/wtree-darwin-x64",
     "build:darwin-arm64": "bun build src/index.ts --compile --target=bun-darwin-arm64 --outfile dist/wtree-darwin-arm64",
-    "test": "bun test"
+    "build:all": "bun run build:linux-x64 && bun run build:linux-arm64 && bun run build:darwin-x64 && bun run build:darwin-arm64",
+    "test": "bun test",
+    "prepublishOnly": "echo 'Ready to publish'"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "js-yaml": "^4.1.0"
@@ -21,13 +52,5 @@
     "@types/js-yaml": "^4.0.9",
     "bun-types": "^1.1.0",
     "typescript": "^5.7.0"
-  },
-  "keywords": [
-    "git",
-    "worktree",
-    "cache",
-    "hardlink",
-    "cli"
-  ],
-  "license": "MIT"
+  }
 }

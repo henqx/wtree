@@ -28,9 +28,9 @@ The goal: **works for Node.js projects on macOS/Linux**.
 - [x] `--json` flag for agent integration
 
 ### Distribution
-- [ ] Bun compiled binary
-- [ ] curl install script
-- [ ] npm package
+- [x] Bun compiled binary
+- [x] curl install script
+- [x] npm package (ready, not published)
 
 ---
 
@@ -51,7 +51,9 @@ The goal: **works for Node.js projects on macOS/Linux**.
 - [x] Custom `post_restore` commands
 
 ### Quality
-- [ ] Unit tests for detection
+- [x] Unit tests for detection
+- [x] Unit tests for CLI parsing
+- [x] Unit tests for config parsing
 - [ ] Integration tests with real repos
 - [ ] CI pipeline (GitHub Actions)
 
