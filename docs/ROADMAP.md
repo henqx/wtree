@@ -69,15 +69,15 @@ The goal: **works for Node.js projects on macOS/Linux**.
 
 ### Rust
 - [x] Recipe: Cargo
-- [ ] Incremental build cache handling
+- [x] ~~Incremental build cache handling~~ (deferred to post-1.0)
 
 ### Go
 - [x] Recipe: Go modules
 - [x] Vendor directory support
 
-### Mixed Stacks
-- [ ] Detect multiple stacks in one repo
-- [ ] Merge cache patterns from multiple recipes
+ ### Mixed Stacks
+- [x] Detect multiple stacks in one repo
+- [x] Merge cache patterns from multiple recipes
 
 ---
 
@@ -159,6 +159,10 @@ Standardized interface for AI coding agents:
 - Save complete workspace state (not just artifacts)
 - Restore to exact point in time
 - Useful for debugging agent runs
+
+### Rust Optimization
+- [ ] Incremental build cache handling in `target/` directory
+- Analyze fingerprint files to avoid copying stale artifacts
 
 ---
 

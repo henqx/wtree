@@ -108,6 +108,21 @@ Works out of the box with:
 
 Don't see your stack? `wtree` also infers cacheable directories from `.gitignore`.
 
+## Mixed Stacks
+
+Projects using multiple technologies are automatically detected and merged. For example, a Rust project with Node.js bindings:
+
+```bash
+$ wtree analyze
+Method: Mixed (rust, npm)
+Detected: Cargo.lock, package-lock.json
+Cache Patterns:
+  • target
+  • node_modules
+```
+
+Cache patterns from all detected recipes are merged (with duplicates removed). For mixed stacks, post-restore commands are skipped—define custom commands in `.wtree.yaml` if needed.
+
 ## Configuration (Optional)
 
 Most projects need zero configuration. For custom setups, create `.wtree.yaml`:

@@ -15,6 +15,7 @@ export async function analyze(args: ParsedArgs): Promise<AnalyzeResult> {
     detection: {
       method: detection.method,
       recipe: detection.recipe,
+      recipes: detection.recipes,
     },
     config: detection.config,
     files: detection.detectedFiles
@@ -38,6 +39,9 @@ export function formatAnalyzeResult(result: AnalyzeResult): string {
       break;
     case "recipe":
       lines.push(`${color.muted("Method:")} ${color.cyan("Recipe")} ${color.muted(`(${result.detection.recipe})`)}`);
+      break;
+    case "mixed":
+      lines.push(`${color.muted("Method:")} ${color.cyan("Mixed")} ${color.muted(`(${result.detection.recipes?.join(", ")})`)}`);
       break;
     case "gitignore":
       lines.push(`${color.muted("Method:")} ${color.cyan("Inferred")} ${color.muted("(from .gitignore)")}`);

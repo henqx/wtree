@@ -10,6 +10,7 @@ interface WorktreeInfo {
   branch: string;
   current: boolean;
   recipe?: string;
+  recipes?: string[];
   artifacts: {
     pattern: string;
     exists: boolean;
@@ -68,6 +69,7 @@ export async function list(args: ParsedArgs): Promise<ListResult> {
       branch: wt.branch,
       current: wt.path === current.path,
       recipe: detection.recipe,
+      recipes: detection.recipes,
       artifacts,
     });
   }
@@ -95,7 +97,9 @@ export function formatListResult(result: ListResult): string {
     lines.push(`${marker}${branchDisplay}`);
     lines.push(`    ${color.muted(wt.path)}`);
 
-    if (wt.recipe) {
+    if (wt.recipes && wt.recipes.length > 1) {
+      lines.push(`    ${color.muted("Recipes:")} ${wt.recipes.join(", ")}`);
+    } else if (wt.recipe) {
       lines.push(`    ${color.muted("Recipe:")} ${wt.recipe}`);
     }
 

@@ -1,6 +1,6 @@
 import { stat } from "fs/promises";
 import { join } from "path";
-import type { Config, DetectionResult } from "../types.ts";
+import type { Config, DetectionResult, Recipe } from "../types.ts";
 import { RECIPES } from "./recipes.ts";
 import { inferFromGitignore } from "./gitignore.ts";
 import { parseConfig } from "../config.ts";
@@ -15,6 +15,23 @@ async function fileExists(path: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * Merge multiple recipe configs into one
+ * - Cache patterns are deduplicated
+ * - Post-restore is undefined (skipped for mixed stacks)
+ */
+function mergeRecipeConfigs(recipes: Recipe[]): Config {
+  // Collect all cache patterns and deduplicate
+  const allCachePatterns = recipes.flatMap((r) => r.config.cache);
+  const uniqueCachePatterns = [...new Set(allCachePatterns)];
+
+  // For mixed stacks, we skip post_restore - user should define in .wtree.yaml
+  return {
+    cache: uniqueCachePatterns,
+    post_restore: undefined,
+  };
 }
 
 /**
@@ -35,7 +52,10 @@ export async function detectConfig(root: string): Promise<DetectionResult> {
     };
   }
 
-  // Tier 2: Try to match a recipe
+  // Tier 2: Try to match ALL recipes (support mixed stacks)
+  const matchedRecipes: Recipe[] = [];
+  const allDetectedFiles: string[] = [];
+
   for (const recipe of RECIPES) {
     const detectedFiles: string[] = [];
 
@@ -47,13 +67,30 @@ export async function detectConfig(root: string): Promise<DetectionResult> {
     }
 
     if (detectedFiles.length > 0) {
-      return {
-        method: "recipe",
-        config: { ...recipe.config, recipe: recipe.name },
-        recipe: recipe.name,
-        detectedFiles,
-      };
+      matchedRecipes.push(recipe);
+      allDetectedFiles.push(...detectedFiles);
     }
+  }
+
+  if (matchedRecipes.length === 1) {
+    // Single recipe - standard behavior
+    const recipe = matchedRecipes[0];
+    return {
+      method: "recipe",
+      config: { ...recipe.config, recipe: recipe.name },
+      recipe: recipe.name,
+      detectedFiles: allDetectedFiles,
+    };
+  } else if (matchedRecipes.length > 1) {
+    // Mixed stack - merge recipes
+    const mergedConfig = mergeRecipeConfigs(matchedRecipes);
+    return {
+      method: "mixed",
+      config: mergedConfig,
+      recipe: matchedRecipes[0].name,
+      recipes: matchedRecipes.map((r) => r.name),
+      detectedFiles: allDetectedFiles,
+    };
   }
 
   // Tier 3: Infer from .gitignore

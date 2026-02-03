@@ -151,6 +151,7 @@ export async function add(args: ParsedArgs): Promise<AddResult> {
       copied: copiedArtifacts,
     },
     recipe: detection.recipe,
+    recipes: detection.recipes,
     warning: gitignoreWarning,
   };
 }
@@ -165,7 +166,9 @@ export function formatAddResult(result: AddResult): string {
   lines.push(`  ${color.muted("Branch:")} ${result.worktree.branch}`);
   lines.push(`  ${color.muted("Source:")} ${result.source.path} (${result.source.branch})`);
 
-  if (result.recipe) {
+  if (result.recipes && result.recipes.length > 1) {
+    lines.push(`  ${color.muted("Recipes:")} ${result.recipes.join(", ")}`);
+  } else if (result.recipe) {
     lines.push(`  ${color.muted("Recipe:")} ${result.recipe}`);
   }
 

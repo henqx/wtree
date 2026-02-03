@@ -87,6 +87,7 @@ export interface AddResult {
     copied: string[];
   };
   recipe?: string;
+  recipes?: string[];
   warning?: string;
 }
 
@@ -106,6 +107,7 @@ export interface RestoreResult {
     copied: string[];
   };
   recipe?: string;
+  recipes?: string[];
 }
 
 /**
@@ -114,8 +116,9 @@ export interface RestoreResult {
 export interface AnalyzeResult {
   success: true;
   detection: {
-    method: "explicit" | "recipe" | "gitignore" | "none";
+    method: "explicit" | "recipe" | "mixed" | "gitignore" | "none";
     recipe?: string;
+    recipes?: string[];
   };
   config: Config | null;
   files?: {
@@ -144,6 +147,7 @@ export interface ListResult {
     branch: string;
     current: boolean;
     recipe?: string;
+    recipes?: string[];
     artifacts: {
       pattern: string;
       exists: boolean;
@@ -191,8 +195,9 @@ export interface ParsedArgs {
  * Detection result from the detection layer
  */
 export interface DetectionResult {
-  method: "explicit" | "recipe" | "gitignore" | "none";
+  method: "explicit" | "recipe" | "mixed" | "gitignore" | "none";
   config: Config | null;
   recipe?: string;
+  recipes?: string[];
   detectedFiles?: string[];
 }

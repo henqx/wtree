@@ -96,6 +96,7 @@ export async function restore(args: ParsedArgs): Promise<RestoreResult> {
       copied: copiedArtifacts,
     },
     recipe: detection.recipe,
+    recipes: detection.recipes,
   };
 }
 
@@ -108,7 +109,9 @@ export function formatRestoreResult(result: RestoreResult): string {
   lines.push(`${color.success("✓")} Restored artifacts to ${color.bold(result.target.path)}`);
   lines.push(`  ${color.muted("Source:")} ${result.source.path}`);
 
-  if (result.recipe) {
+  if (result.recipes && result.recipes.length > 1) {
+    lines.push(`  ${color.muted("Recipes:")} ${result.recipes.join(", ")}`);
+  } else if (result.recipe) {
     lines.push(`  ${color.muted("Recipe:")} ${result.recipe}`);
   }
 
