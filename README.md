@@ -146,7 +146,60 @@ post_restore: pnpm install --prefer-offline && pnpm build:packages
 
 ## Agent Integration
 
-`wtree` is designed for AI coding agents. Use `--json` for structured output:
+`wtree` is designed for AI coding agents running parallel workflows. When agents like Cursor, Claude Code, or Codex work on multiple tasks simultaneously, each task benefits from its own isolated worktree—but recreating `node_modules` or build caches for each one is slow and wasteful. `wtree` solves this by hardlinking artifacts, making worktree creation nearly instant with zero additional disk space.
+
+### Recommended Workflow
+
+**One worktree per task.** Each agent task gets an isolated environment:
+
+```bash
+# Agent starting a new task
+wtree add .worktrees/fix-auth-bug
+cd .worktrees/fix-auth-bug
+# ... work on the task ...
+
+# When done, clean up
+wtree remove .worktrees/fix-auth-bug
+```
+
+The `.worktrees/` directory pattern keeps worktrees organized within your repo (add `.worktrees` to `.gitignore`).
+
+### Configuring Your Agent
+
+Add wtree to your agent's instructions so it uses worktrees automatically.
+
+**Claude Code** (`.claude.md` or `CLAUDE.md`):
+
+```markdown
+## Parallel Work
+
+When working on tasks that benefit from isolation, use wtree to create worktrees:
+
+- Create: `wtree add .worktrees/<branch-name>`
+- Remove when done: `wtree remove .worktrees/<branch-name>`
+- Use `--json` flag for structured output
+```
+
+**Cursor** (`.cursorrules`):
+
+```
+When working on isolated tasks or experiments, create a git worktree:
+- Run: wtree add .worktrees/<descriptive-name>
+- Work in the new worktree directory
+- Clean up with: wtree remove .worktrees/<descriptive-name>
+```
+
+**Codex** (agent instructions):
+
+```
+For parallel task execution, use wtree to create isolated worktrees:
+wtree add .worktrees/<task-name> --json
+This preserves node_modules and build caches via hardlinks.
+```
+
+### JSON Output
+
+Use `--json` for structured output that agents can parse:
 
 ```bash
 wtree add ../feature-branch --json
@@ -170,6 +223,15 @@ wtree add ../feature-branch --json
   "recipe": "bun"
 }
 ```
+
+### Why Hardlinks Matter for Agents
+
+Traditional worktree setup requires reinstalling dependencies for each worktree. With 10 parallel agent tasks on a project with 500MB of `node_modules`, that's potentially 5GB of disk space and minutes of install time per task.
+
+With `wtree`:
+- **Instant creation**: Hardlinking is O(1) regardless of artifact size
+- **Zero disk overhead**: All worktrees share the same physical bytes
+- **Automatic reconciliation**: If dependencies differ, `post_restore` commands sync them in seconds
 
 ## Requirements
 
