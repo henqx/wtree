@@ -24,6 +24,16 @@ export const RECIPES: Recipe[] = [
     },
   },
 
+  // Rush.js monorepo
+  {
+    name: "rush",
+    detect: ["rush.json"],
+    config: {
+      cache: ["common/temp/node_modules", ".rush/temp"],
+      post_restore: undefined,
+    },
+  },
+
   // pnpm
   {
     name: "pnpm",

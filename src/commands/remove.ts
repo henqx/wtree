@@ -1,6 +1,8 @@
+import { resolve } from "path";
 import type { RemoveResult, ParsedArgs } from "../types.ts";
 import { WtreeError, ErrorCode } from "../types.ts";
 import {
+  findWorktreeByPath,
   findWorktreeByBranch,
   removeWorktree,
   getCurrentWorktree,
@@ -8,23 +10,27 @@ import {
 
 /**
  * Remove command - remove a worktree
+ * Accepts either a path or branch name (tries path first, then branch)
  */
 export async function remove(args: ParsedArgs): Promise<RemoveResult> {
-  // Validate arguments
   if (args.positional.length === 0) {
     throw new WtreeError(
-      "Missing branch name. Usage: wtree remove <branch>",
+      "Missing path. Usage: wtree remove <path>",
       ErrorCode.INVALID_ARGS
     );
   }
 
-  const branch = args.positional[0];
+  const target = args.positional[0];
 
-  // Find worktree by branch
-  const worktree = await findWorktreeByBranch(branch);
+  // Try to find by path first, then by branch
+  let worktree = await findWorktreeByPath(target);
+  if (!worktree) {
+    worktree = await findWorktreeByBranch(target);
+  }
+
   if (!worktree) {
     throw new WtreeError(
-      `Worktree not found for branch: ${branch}`,
+      `Worktree not found: ${target}`,
       ErrorCode.WORKTREE_NOT_FOUND
     );
   }

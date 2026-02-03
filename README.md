@@ -80,6 +80,7 @@ Works out of the box with:
 | Bun | `bun.lock`, `bun.lockb` | `node_modules` |
 | Turborepo | `turbo.json` | `node_modules`, `.turbo`, `**/node_modules` |
 | Nx | `nx.json` | `node_modules`, `.nx/cache`, `**/node_modules` |
+| Rush | `rush.json` | `common/temp/node_modules`, `.rush/temp` |
 | Python (uv) | `uv.lock` | `.venv` |
 | Python (pip) | `requirements.txt` | `.venv` |
 | Rust | `Cargo.lock` | `target` |

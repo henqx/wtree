@@ -1,4 +1,5 @@
-import { resolve, basename, relative } from "path";
+import { resolve, basename, relative, dirname } from "path";
+import { realpath } from "fs/promises";
 import type { AddResult, ParsedArgs } from "../types.ts";
 import { WtreeError, ErrorCode } from "../types.ts";
 import {
@@ -10,6 +11,30 @@ import {
 } from "../git.ts";
 import { detectConfig } from "../detect/index.ts";
 import { copyArtifacts, runPostRestore } from "../copy.ts";
+
+/**
+ * Resolve path with symlinks, handling non-existent paths by walking up to first existing ancestor
+ */
+async function resolveRealPath(path: string): Promise<string> {
+  const resolved = resolve(path);
+  const parts: string[] = [];
+
+  let current = resolved;
+  while (current !== "/") {
+    try {
+      const real = await realpath(current);
+      // Found an existing path, append any remaining parts
+      return parts.length > 0 ? `${real}/${parts.reverse().join("/")}` : real;
+    } catch {
+      // Path doesn't exist, save the basename and move up
+      parts.push(basename(current));
+      current = dirname(current);
+    }
+  }
+
+  // Reached root, return original resolved path
+  return resolved;
+}
 
 /**
  * Add command - create a new worktree with cached artifacts
@@ -72,8 +97,10 @@ export async function add(args: ParsedArgs): Promise<AddResult> {
   const detection = await detectConfig(sourceWorktree.path);
 
   // Check if this is a nested worktree (inside the repo)
+  // Resolve symlinks to ensure consistent path comparison (e.g., /tmp vs /private/tmp on macOS)
   const repoRoot = await getWorktreeRoot(sourceWorktree.path);
-  const relativePath = relative(repoRoot, targetPath);
+  const resolvedTargetPath = await resolveRealPath(targetPath);
+  const relativePath = relative(repoRoot, resolvedTargetPath);
   const isNested = !relativePath.startsWith("..");
 
   let gitignoreWarning: string | undefined;

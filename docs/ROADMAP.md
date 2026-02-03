@@ -41,7 +41,7 @@ The goal: **works for Node.js projects on macOS/Linux**.
 - [x] Recipe: Nx
 - [ ] Recipe: Lerna
 - [ ] Recipe: pnpm workspaces (without turbo)
-- [ ] Recipe: Rush.js
+- [x] Recipe: Rush.js
 - [x] Glob pattern expansion (`**/node_modules`)
 
 ### Config
@@ -54,7 +54,7 @@ The goal: **works for Node.js projects on macOS/Linux**.
 - [x] Unit tests for detection
 - [x] Unit tests for CLI parsing
 - [x] Unit tests for config parsing
-- [ ] Integration tests with real repos
+- [x] Integration tests with real repos
 - [ ] CI pipeline (GitHub Actions)
 
 ---

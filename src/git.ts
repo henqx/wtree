@@ -227,3 +227,26 @@ export async function isGitRepo(cwd?: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Find a worktree by path (resolves symlinks for comparison)
+ */
+export async function findWorktreeByPath(
+  targetPath: string,
+  cwd?: string
+): Promise<Worktree | undefined> {
+  const { resolve } = await import("path");
+  const { realpath } = await import("fs/promises");
+
+  let absolutePath: string;
+  try {
+    // Resolve symlinks (e.g., /tmp -> /private/tmp on macOS)
+    absolutePath = await realpath(resolve(targetPath));
+  } catch {
+    // Path doesn't exist yet, use resolved path
+    absolutePath = resolve(targetPath);
+  }
+
+  const worktrees = await listWorktrees(cwd);
+  return worktrees.find((w) => w.path === absolutePath);
+}

@@ -11,6 +11,7 @@ describe("recipes", () => {
       expect(names).toContain("bun");
       expect(names).toContain("turborepo");
       expect(names).toContain("nx");
+      expect(names).toContain("rush");
       expect(names).toContain("python-uv");
       expect(names).toContain("python-pip");
       expect(names).toContain("rust");
@@ -43,6 +44,13 @@ describe("recipes", () => {
       const pnpmIndex = RECIPES.findIndex((r) => r.name === "pnpm");
 
       expect(nxIndex).toBeLessThan(pnpmIndex);
+    });
+
+    test("rush is checked before pnpm/npm/yarn", () => {
+      const rushIndex = RECIPES.findIndex((r) => r.name === "rush");
+      const pnpmIndex = RECIPES.findIndex((r) => r.name === "pnpm");
+
+      expect(rushIndex).toBeLessThan(pnpmIndex);
     });
   });
 
@@ -96,6 +104,11 @@ describe("recipes", () => {
       const go = getRecipeByName("go");
       expect(go?.detect).toContain("go.sum");
     });
+
+    test("rush detects rush.json", () => {
+      const rush = getRecipeByName("rush");
+      expect(rush?.detect).toContain("rush.json");
+    });
   });
 
   describe("recipe cache patterns", () => {
@@ -128,6 +141,12 @@ describe("recipes", () => {
     test("go caches vendor", () => {
       const go = getRecipeByName("go");
       expect(go?.config.cache).toContain("vendor");
+    });
+
+    test("rush caches common/temp/node_modules and .rush/temp", () => {
+      const rush = getRecipeByName("rush");
+      expect(rush?.config.cache).toContain("common/temp/node_modules");
+      expect(rush?.config.cache).toContain(".rush/temp");
     });
   });
 });
