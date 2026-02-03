@@ -10,7 +10,7 @@ if [ -z "$VERSION" ]; then
     exit 1
 fi
 
-REPO="anthropics/wtree"
+REPO="henqx/wtree"
 FORMULA="homebrew/wtree.rb"
 
 echo "Updating formula for version $VERSION..."

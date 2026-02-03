@@ -30,7 +30,7 @@ async function main() {
     console.error("  curl -fsSL https://bun.sh/install | bash");
     console.error("");
     console.error("Or use the standalone binary:");
-    console.error("  curl -fsSL https://raw.githubusercontent.com/anthropics/wtree/main/scripts/install.sh | bash");
+    console.error("  curl -fsSL https://raw.githubusercontent.com/henqx/wtree/main/scripts/install.sh | bash");
     process.exit(1);
   }
 

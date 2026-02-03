@@ -2,17 +2,17 @@
   "name": "wtree",
   "version": "0.1.0",
   "type": "module",
-  "description": "Accelerate git worktree creation with hardlinked build artifacts",
-  "author": "Anthropic",
+  "description": "Zero-config install/build cache for git worktrees.",
+  "author": "henqx",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/anthropics/wtree.git"
+    "url": "git+https://github.com/henqx/wtree.git"
   },
   "bugs": {
-    "url": "https://github.com/anthropics/wtree/issues"
+    "url": "https://github.com/henqx/wtree/issues"
   },
-  "homepage": "https://github.com/anthropics/wtree#readme",
+  "homepage": "https://github.com/henqx/wtree#readme",
   "keywords": [
     "git",
     "worktree",

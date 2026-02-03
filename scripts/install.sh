@@ -2,9 +2,9 @@
 set -e
 
 # wtree installer
-# Usage: curl -fsSL https://raw.githubusercontent.com/anthropics/wtree/main/scripts/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/henqx/wtree/main/scripts/install.sh | bash
 
-REPO="anthropics/wtree"
+REPO="henqx/wtree"
 INSTALL_DIR="${WTREE_INSTALL_DIR:-/usr/local/bin}"
 BINARY_NAME="wtree"
 

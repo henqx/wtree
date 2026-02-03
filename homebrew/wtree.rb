@@ -3,13 +3,13 @@
 
 class Wtree < Formula
   desc "Accelerate git worktree creation with hardlinked build artifacts"
-  homepage "https://github.com/anthropics/wtree"
+  homepage "https://github.com/henqx/wtree"
   version "0.1.0"
   license "MIT"
 
   on_macos do
     on_arm do
-      url "https://github.com/anthropics/wtree/releases/download/v#{version}/wtree-darwin-arm64"
+      url "https://github.com/henqx/wtree/releases/download/v#{version}/wtree-darwin-arm64"
       sha256 "PLACEHOLDER_SHA256_DARWIN_ARM64"
 
       def install
@@ -17,7 +17,7 @@ class Wtree < Formula
       end
     end
     on_intel do
-      url "https://github.com/anthropics/wtree/releases/download/v#{version}/wtree-darwin-x64"
+      url "https://github.com/henqx/wtree/releases/download/v#{version}/wtree-darwin-x64"
       sha256 "PLACEHOLDER_SHA256_DARWIN_X64"
 
       def install
@@ -28,7 +28,7 @@ class Wtree < Formula
 
   on_linux do
     on_arm do
-      url "https://github.com/anthropics/wtree/releases/download/v#{version}/wtree-linux-arm64"
+      url "https://github.com/henqx/wtree/releases/download/v#{version}/wtree-linux-arm64"
       sha256 "PLACEHOLDER_SHA256_LINUX_ARM64"
 
       def install
@@ -36,7 +36,7 @@ class Wtree < Formula
       end
     end
     on_intel do
-      url "https://github.com/anthropics/wtree/releases/download/v#{version}/wtree-linux-x64"
+      url "https://github.com/henqx/wtree/releases/download/v#{version}/wtree-linux-x64"
       sha256 "PLACEHOLDER_SHA256_LINUX_X64"
 
       def install

@@ -85,7 +85,7 @@ The goal: **works for Node.js projects on macOS/Linux**.
 
 ### Installation
 - [x] Homebrew formula
-- [x] Homebrew tap: `brew install anthropics/wtree/wtree`
+- [x] Homebrew tap: `brew install henqx/wtree/wtree`
 - [ ] Submit to homebrew-core (stretch)
 
 ### Developer Experience

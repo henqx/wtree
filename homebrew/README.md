@@ -6,19 +6,19 @@ This directory contains the Homebrew formula for wtree.
 
 To create a Homebrew tap, you need a separate GitHub repository:
 
-1. Create a new repository named `homebrew-wtree` under the `anthropics` organization
+1. Create a new repository named `homebrew-wtree` under the `henqx` organization
 2. Copy the `wtree.rb` formula to the repository root (or `Formula/` directory)
 3. Users can then install with:
 
 ```bash
-brew tap anthropics/wtree
+brew tap henqx/wtree
 brew install wtree
 ```
 
 Or in one command:
 
 ```bash
-brew install anthropics/wtree/wtree
+brew install henqx/wtree/wtree
 ```
 
 ## Updating the Formula
