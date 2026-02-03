@@ -32,8 +32,8 @@ async function createTestRepo(files: Record<string, string> = {}): Promise<TestR
   // Resolve symlinks (macOS /var -> /private/var)
   const root = await resolvePath(tempRoot);
 
-  // Initialize git repo
-  await exec(["git", "init"], root);
+  // Initialize git repo with explicit main branch
+  await exec(["git", "init", "--initial-branch=main"], root);
   await exec(["git", "config", "user.email", "test@test.com"], root);
   await exec(["git", "config", "user.name", "Test"], root);
 

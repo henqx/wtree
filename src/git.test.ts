@@ -18,7 +18,7 @@ describe("git utilities", () => {
 
   async function createGitRepo(): Promise<string> {
     tempDir = await mkdtemp(join(tmpdir(), "wtree-git-test-"));
-    await exec(["git", "init"], tempDir);
+    await exec(["git", "init", "--initial-branch=main"], tempDir);
     await exec(["git", "config", "user.email", "test@test.com"], tempDir);
     await exec(["git", "config", "user.name", "Test"], tempDir);
     await writeFile(join(tempDir, "README.md"), "# Test");
