@@ -2,6 +2,8 @@
 
 Fast git worktree creation with cached artifacts. Built for parallel agent workflows.
 
+I built this project initially to support exactly one use case: mine. But AI makes it so easy to give these one-off hacked-together tools to get that extra polish, so why not release it.
+
 ## The Problem
 
 When you create a git worktree, you get a fresh working directory—but `node_modules`, build caches, and virtual environments need to be recreated from scratch. For parallel agent workflows (Cursor, Codex, Claude Code), this setup time dominates actual work time.
@@ -15,6 +17,12 @@ When you create a git worktree, you get a fresh working directory—but `node_mo
 wtree add ../feature-branch
 
 # That's it. Your new worktree is ready to use.
+```
+
+Or, for an existing worktree:
+```bash
+cd ../existing-worktree
+wtree restore 
 ```
 
 ## Installation

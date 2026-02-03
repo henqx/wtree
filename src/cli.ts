@@ -140,5 +140,5 @@ RECIPES:
  */
 export function printVersion(): void {
   // Read from package.json would be ideal, but for simplicity:
-  console.log("wtree 0.1.0");
+  console.log("wtree 0.3.0");
 }

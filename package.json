@@ -1,6 +1,6 @@
 {
   "name": "wtree",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "type": "module",
   "description": "Zero-config install/build cache for git worktrees.",
   "author": "henqx",
