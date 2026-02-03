@@ -1,7 +1,12 @@
 import { resolve } from "path";
 import type { RestoreResult, ParsedArgs } from "../types.ts";
 import { WtreeError, ErrorCode } from "../types.ts";
-import { getWorktreeRoot, findWorktreeByBranch, listWorktrees } from "../git.ts";
+import {
+  getWorktreeRoot,
+  findWorktreeByBranch,
+  listWorktrees,
+  findBestSourceWorktree,
+} from "../git.ts";
 import { detectConfig } from "../detect/index.ts";
 import { copyArtifacts, runPostRestore } from "../copy.ts";
 import { stat } from "fs/promises";
@@ -24,25 +29,18 @@ async function isWorktree(path: string): Promise<boolean> {
 
 /**
  * Restore command - restore artifacts to an existing worktree
+ * Auto-detects source worktree if --from is not provided
  */
 export async function restore(args: ParsedArgs): Promise<RestoreResult> {
   // Validate arguments
   if (args.positional.length === 0) {
     throw new WtreeError(
-      "Missing target path. Usage: wtree restore <path> --from <branch>",
-      ErrorCode.INVALID_ARGS
-    );
-  }
-
-  if (!args.flags.from) {
-    throw new WtreeError(
-      "Missing --from flag. Usage: wtree restore <path> --from <branch>",
+      "Missing target path. Usage: wtree restore <path> [--from <branch>]",
       ErrorCode.INVALID_ARGS
     );
   }
 
   const targetPath = resolve(args.positional[0]);
-  const fromBranch = args.flags.from;
 
   // Validate target is a worktree
   if (!(await isWorktree(targetPath))) {
@@ -53,12 +51,26 @@ export async function restore(args: ParsedArgs): Promise<RestoreResult> {
   }
 
   // Find source worktree
-  const sourceWorktree = await findWorktreeByBranch(fromBranch);
-  if (!sourceWorktree) {
-    throw new WtreeError(
-      `Source worktree not found: ${fromBranch}`,
-      ErrorCode.WORKTREE_NOT_FOUND
-    );
+  let sourceWorktree;
+  let autoDetectWarning: string | undefined;
+  let fromBranch: string;
+
+  if (args.flags.from) {
+    // Explicit source specified
+    fromBranch = args.flags.from;
+    sourceWorktree = await findWorktreeByBranch(fromBranch);
+    if (!sourceWorktree) {
+      throw new WtreeError(
+        `Source worktree not found: ${fromBranch}`,
+        ErrorCode.WORKTREE_NOT_FOUND
+      );
+    }
+  } else {
+    // Auto-detect best source worktree
+    const bestSource = await findBestSourceWorktree();
+    sourceWorktree = bestSource.worktree;
+    fromBranch = bestSource.source;
+    autoDetectWarning = bestSource.warning;
   }
 
   // Detect configuration from source
@@ -90,6 +102,7 @@ export async function restore(args: ParsedArgs): Promise<RestoreResult> {
     },
     source: {
       path: sourceWorktree.path,
+      branch: sourceWorktree.branch,
     },
     artifacts: {
       patterns: detection.config.cache,
@@ -97,6 +110,7 @@ export async function restore(args: ParsedArgs): Promise<RestoreResult> {
     },
     recipe: detection.recipe,
     recipes: detection.recipes,
+    warning: autoDetectWarning,
   };
 }
 
@@ -107,7 +121,7 @@ export function formatRestoreResult(result: RestoreResult): string {
   const lines: string[] = [];
 
   lines.push(`${color.success("✓")} Restored artifacts to ${color.bold(result.target.path)}`);
-  lines.push(`  ${color.muted("Source:")} ${result.source.path}`);
+  lines.push(`  ${color.muted("Source:")} ${result.source.path} (${result.source.branch})`);
 
   if (result.recipes && result.recipes.length > 1) {
     lines.push(`  ${color.muted("Recipes:")} ${result.recipes.join(", ")}`);
@@ -125,6 +139,11 @@ export function formatRestoreResult(result: RestoreResult): string {
     }
   } else {
     lines.push(`  ${color.muted("No new artifacts to copy")}`);
+  }
+
+  if (result.warning) {
+    lines.push("");
+    lines.push(`${color.warning("⚠")} ${color.yellow(result.warning)}`);
   }
 
   return lines.join("\n");

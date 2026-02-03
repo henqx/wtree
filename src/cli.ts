@@ -91,7 +91,7 @@ USAGE:
 
 COMMANDS:
   add <path> [branch]   Create a new worktree with cached artifacts
-  restore <path>        Restore artifacts to an existing worktree
+  restore <path>        Restore artifacts to an existing worktree (auto-detects source)
   analyze               Show detected configuration for current directory
   list                  Show all worktrees with cache status
   remove <path>         Remove a worktree
@@ -114,8 +114,9 @@ EXAMPLES:
   wtree add .worktrees/feature-x            # new branch "feature-x"
   wtree add .worktrees/hotfix -b hotfix-123 # explicit new branch
 
-  # Other commands
-  wtree restore ./my-worktree --from ../main
+   # Other commands
+   wtree restore ./my-worktree              # auto-detect source
+   wtree restore ./my-worktree --from main  # explicit source
   wtree analyze --json
   wtree remove .worktrees/feature-x
 

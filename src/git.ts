@@ -112,6 +112,125 @@ export async function findWorktreeByBranch(
 }
 
 /**
+ * Check if a worktree has populated cache (at least one cache directory exists with content)
+ */
+async function hasPopulatedCache(
+  worktree: Worktree,
+  cachePatterns: string[]
+): Promise<boolean> {
+  const { stat } = await import("fs/promises");
+  const { join } = await import("path");
+
+  for (const pattern of cachePatterns) {
+    // Skip glob patterns for this check
+    if (pattern.includes("*")) continue;
+
+    try {
+      const cachePath = join(worktree.path, pattern);
+      const s = await stat(cachePath);
+      if (s.isDirectory() && s.size > 0) {
+        // Check if directory has contents (non-empty)
+        const { readdir } = await import("fs/promises");
+        const contents = await readdir(cachePath);
+        if (contents.length > 0) {
+          return true;
+        }
+      }
+    } catch {
+      // Directory doesn't exist or is empty, continue checking
+      continue;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Find the best source worktree for restoring cache.
+ * Best-guess priority:
+ * 1. main branch with populated cache
+ * 2. master branch with populated cache
+ * 3. Any worktree with populated cache
+ * 4. Current worktree (even if empty cache)
+ * 5. First available worktree
+ */
+export async function findBestSourceWorktree(
+  cwd?: string
+): Promise<{ worktree: Worktree; source: string; warning?: string }> {
+  const { detectConfig } = await import("./detect/index.ts");
+  const worktrees = await listWorktrees(cwd);
+  const nonBareWorktrees = worktrees.filter((w) => !w.bare);
+
+  if (nonBareWorktrees.length === 0) {
+    throw new WtreeError(
+      "No worktrees found to copy cache from",
+      ErrorCode.WORKTREE_NOT_FOUND
+    );
+  }
+
+  // Check each worktree for cache and track the best candidates
+  const candidates: Array<{
+    worktree: Worktree;
+    hasCache: boolean;
+    isMain: boolean;
+    isMaster: boolean;
+  }> = [];
+
+  for (const wt of nonBareWorktrees) {
+    const detection = await detectConfig(wt.path);
+    const cachePatterns = detection.config?.cache ?? [];
+    const hasCache =
+      cachePatterns.length > 0 && (await hasPopulatedCache(wt, cachePatterns));
+
+    candidates.push({
+      worktree: wt,
+      hasCache,
+      isMain: wt.branch === "main",
+      isMaster: wt.branch === "master",
+    });
+  }
+
+  // Priority 1: main with cache
+  const mainWithCache = candidates.find((c) => c.isMain && c.hasCache);
+  if (mainWithCache) {
+    return { worktree: mainWithCache.worktree, source: "main" };
+  }
+
+  // Priority 2: master with cache
+  const masterWithCache = candidates.find((c) => c.isMaster && c.hasCache);
+  if (masterWithCache) {
+    return { worktree: masterWithCache.worktree, source: "master" };
+  }
+
+  // Priority 3: Any worktree with cache
+  const anyWithCache = candidates.find((c) => c.hasCache);
+  if (anyWithCache) {
+    return {
+      worktree: anyWithCache.worktree,
+      source: anyWithCache.worktree.branch,
+      warning: `Auto-detected source: ${anyWithCache.worktree.branch} (has cache)`,
+    };
+  }
+
+  // Priority 4: Current worktree
+  try {
+    const current = await getCurrentWorktree(cwd);
+    return {
+      worktree: current,
+      source: current.branch,
+      warning: `No cached worktrees found. Using current: ${current.branch}`,
+    };
+  } catch {
+    // Priority 5: First available
+    return {
+      worktree: nonBareWorktrees[0],
+      source: nonBareWorktrees[0].branch,
+      warning: `No cached worktrees found. Using: ${nonBareWorktrees[0].branch}`,
+    };
+  }
+}
+
+/**
  * Get the current worktree
  */
 export async function getCurrentWorktree(cwd?: string): Promise<Worktree> {

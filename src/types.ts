@@ -101,6 +101,7 @@ export interface RestoreResult {
   };
   source: {
     path: string;
+    branch: string;
   };
   artifacts: {
     patterns: string[];
@@ -108,6 +109,7 @@ export interface RestoreResult {
   };
   recipe?: string;
   recipes?: string[];
+  warning?: string;
 }
 
 /**

@@ -59,8 +59,11 @@ wtree add .worktrees/feature-x
 # Specify source worktree for artifacts
 wtree add ../feature-branch --from develop
 
-# Restore artifacts to an existing worktree
-wtree restore ./path/to/worktree --from ../main
+# Restore artifacts to an existing worktree (auto-detects best source)
+wtree restore ./path/to/worktree
+
+# Or specify the source explicitly
+wtree restore ./path/to/worktree --from main
 
 # List all worktrees with cache status
 wtree list

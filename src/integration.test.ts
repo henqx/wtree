@@ -703,16 +703,135 @@ describe("integration: error scenarios", () => {
     expect(result.code).toBe("INVALID_ARGS");
   });
 
-  test("restore fails with missing --from argument", async () => {
+  test("restore auto-detects source worktree when --from not provided", async () => {
     repo = await createTestRepo({
       "pnpm-lock.yaml": "",
     });
 
-    const result = await wtree(["restore", repo.root], repo.root);
+    const { mkdir, writeFile, rm } = await import("fs/promises");
+    const { join } = await import("path");
 
-    expect(result.error).toBe(true);
-    expect(result.code).toBe("INVALID_ARGS");
-    expect(result.message).toContain("--from");
+    // Rename branch to ensure consistent naming in test
+    await exec(["git", "branch", "-m", "main"], repo.root);
+
+    // Create a second worktree from a feature branch (no node_modules yet)
+    await wtree(["add", "-b", "feature", ".worktrees/feature"], repo.root);
+
+    // Now create node_modules in main AFTER worktree creation
+    // This ensures restore has something to copy
+    await mkdir(join(repo.root, "node_modules", "test-pkg"), { recursive: true });
+    await writeFile(
+      join(repo.root, "node_modules", "test-pkg", "package.json"),
+      '{"name": "test-pkg"}'
+    );
+
+    // Restore to the feature worktree without --from (should auto-detect main)
+    const result = await wtree(["restore", ".worktrees/feature"], repo.root);
+
+    expect(result.error).toBeUndefined();
+    expect(result.success).toBe(true);
+    expect(result.source).toBeDefined();
+    expect(result.source.branch).toBe("main");
+    // Should have copied node_modules
+    expect(result.artifacts?.copied).toContain("node_modules");
+  });
+
+  test("restore auto-detects master when main has no cache", async () => {
+    repo = await createTestRepo({
+      "pnpm-lock.yaml": "",
+    });
+
+    const { mkdir, writeFile } = await import("fs/promises");
+    const { join } = await import("path");
+
+    // Rename branch to master (not main)
+    await exec(["git", "branch", "-m", "master"], repo.root);
+
+    // Create a feature worktree (no node_modules yet)
+    await wtree(["add", "-b", "feature", ".worktrees/feature"], repo.root);
+
+    // Create node_modules in master AFTER worktree creation
+    await mkdir(join(repo.root, "node_modules", "test-pkg"), { recursive: true });
+    await writeFile(
+      join(repo.root, "node_modules", "test-pkg", "package.json"),
+      '{"name": "test-pkg"}'
+    );
+
+    // Restore should auto-detect master
+    const result = await wtree(["restore", ".worktrees/feature"], repo.root);
+
+    expect(result.error).toBeUndefined();
+    expect(result.success).toBe(true);
+    expect(result.source.branch).toBe("master");
+    expect(result.artifacts?.copied).toContain("node_modules");
+  });
+
+  test("restore prefers main over other branches with cache", async () => {
+    repo = await createTestRepo({
+      "pnpm-lock.yaml": "",
+    });
+
+    const { mkdir, writeFile } = await import("fs/promises");
+    const { join } = await import("path");
+
+    // Rename to main
+    await exec(["git", "branch", "-m", "main"], repo.root);
+
+    // Create develop worktree
+    await wtree(["add", "-b", "develop", ".worktrees/develop"], repo.root);
+
+    // Create feature worktree (this is the restore target)
+    await wtree(["add", "-b", "feature", ".worktrees/feature"], repo.root);
+
+    // Add cache to BOTH main and develop AFTER worktrees created
+    await mkdir(join(repo.root, "node_modules", "main-pkg"), { recursive: true });
+    await writeFile(
+      join(repo.root, "node_modules", "main-pkg", "package.json"),
+      '{"name": "main-pkg"}'
+    );
+
+    await mkdir(join(repo.root, ".worktrees/develop/node_modules", "dev-pkg"), { recursive: true });
+    await writeFile(
+      join(repo.root, ".worktrees/develop/node_modules", "dev-pkg", "package.json"),
+      '{"name": "dev-pkg"}'
+    );
+
+    // Restore should prefer main even though develop also has cache
+    const result = await wtree(["restore", ".worktrees/feature"], repo.root);
+
+    expect(result.error).toBeUndefined();
+    expect(result.success).toBe(true);
+    expect(result.source.branch).toBe("main");
+  });
+
+  test("restore falls back to any worktree with cache when no main/master", async () => {
+    repo = await createTestRepo({
+      "pnpm-lock.yaml": "",
+    });
+
+    const { mkdir, writeFile } = await import("fs/promises");
+    const { join } = await import("path");
+
+    // Rename to develop (not main or master)
+    await exec(["git", "branch", "-m", "develop"], repo.root);
+
+    // Create feature worktree
+    await wtree(["add", "-b", "feature", ".worktrees/feature"], repo.root);
+
+    // Add cache to develop AFTER worktree creation
+    await mkdir(join(repo.root, "node_modules", "dev-pkg"), { recursive: true });
+    await writeFile(
+      join(repo.root, "node_modules", "dev-pkg", "package.json"),
+      '{"name": "dev-pkg"}'
+    );
+
+    // Restore should use develop and include a warning
+    const result = await wtree(["restore", ".worktrees/feature"], repo.root);
+
+    expect(result.error).toBeUndefined();
+    expect(result.success).toBe(true);
+    expect(result.source.branch).toBe("develop");
+    expect(result.warning).toContain("Auto-detected source: develop");
   });
 
   test("restore fails for non-existent source branch", async () => {
