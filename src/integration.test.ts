@@ -1,7 +1,18 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtemp, writeFile, mkdir, rm, readdir, stat } from "fs/promises";
+import { mkdtemp, writeFile, mkdir, rm, readdir, stat, realpath } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
+
+/**
+ * Resolve a path through symlinks (handles macOS /var -> /private/var)
+ */
+async function resolvePath(path: string): Promise<string> {
+  try {
+    return await realpath(path);
+  } catch {
+    return path;
+  }
+}
 
 /**
  * Integration tests for wtree commands.
@@ -17,7 +28,9 @@ interface TestRepo {
  * Create a temporary git repository for testing
  */
 async function createTestRepo(files: Record<string, string> = {}): Promise<TestRepo> {
-  const root = await mkdtemp(join(tmpdir(), "wtree-integration-"));
+  const tempRoot = await mkdtemp(join(tmpdir(), "wtree-integration-"));
+  // Resolve symlinks (macOS /var -> /private/var)
+  const root = await resolvePath(tempRoot);
 
   // Initialize git repo
   await exec(["git", "init"], root);
@@ -523,5 +536,388 @@ describe("integration: remove", () => {
     } finally {
       await rm(worktreePath, { recursive: true, force: true }).catch(() => {});
     }
+  });
+});
+
+describe("integration: list", () => {
+  let repo: TestRepo;
+
+  afterEach(async () => {
+    if (repo) await repo.cleanup();
+  });
+
+  test("lists single worktree", async () => {
+    repo = await createTestRepo({
+      "pnpm-lock.yaml": "",
+      "package.json": "{}",
+    });
+
+    const result = await wtree(["list"], repo.root);
+
+    expect(result.success).toBe(true);
+    expect(result.worktrees).toHaveLength(1);
+    expect(result.worktrees[0].path).toBe(repo.root);
+    expect(result.worktrees[0].current).toBe(true);
+  });
+
+  test("lists multiple worktrees", async () => {
+    repo = await createTestRepo({
+      "pnpm-lock.yaml": "",
+      "package.json": "{}",
+    });
+
+    const suffix = Date.now();
+    const worktreePath = join(repo.root, "..", `list-test-${suffix}`);
+
+    try {
+      await exec(["git", "worktree", "add", "-b", `list-branch-${suffix}`, worktreePath], repo.root);
+
+      const result = await wtree(["list"], repo.root);
+
+      expect(result.success).toBe(true);
+      expect(result.worktrees.length).toBeGreaterThanOrEqual(2);
+
+      const paths = result.worktrees.map((w: any) => w.path);
+      expect(paths).toContain(repo.root);
+    } finally {
+      await rm(worktreePath, { recursive: true, force: true }).catch(() => {});
+    }
+  });
+
+  test("shows recipe for detected worktrees", async () => {
+    repo = await createTestRepo({
+      "pnpm-lock.yaml": "",
+      "package.json": "{}",
+    });
+
+    const result = await wtree(["list"], repo.root);
+
+    expect(result.success).toBe(true);
+    expect(result.worktrees[0].recipe).toBe("pnpm");
+  });
+
+  test("shows artifact status", async () => {
+    repo = await createTestRepo({
+      "pnpm-lock.yaml": "",
+      "package.json": "{}",
+    });
+
+    // Create node_modules
+    await mkdir(join(repo.root, "node_modules"));
+    await writeFile(join(repo.root, "node_modules", ".package-lock.json"), "{}");
+
+    const result = await wtree(["list"], repo.root);
+
+    expect(result.success).toBe(true);
+    expect(result.worktrees[0].artifacts.length).toBeGreaterThan(0);
+
+    const nodeModules = result.worktrees[0].artifacts.find(
+      (a: any) => a.pattern === "node_modules"
+    );
+    expect(nodeModules).toBeDefined();
+    expect(nodeModules.exists).toBe(true);
+  });
+
+  test("shows missing artifacts", async () => {
+    repo = await createTestRepo({
+      "pnpm-lock.yaml": "",
+      "package.json": "{}",
+    });
+
+    // Don't create node_modules
+
+    const result = await wtree(["list"], repo.root);
+
+    expect(result.success).toBe(true);
+    const nodeModules = result.worktrees[0].artifacts.find(
+      (a: any) => a.pattern === "node_modules"
+    );
+    expect(nodeModules).toBeDefined();
+    expect(nodeModules.exists).toBe(false);
+  });
+
+  test("marks current worktree", async () => {
+    repo = await createTestRepo({
+      "package.json": "{}",
+    });
+
+    const suffix = Date.now();
+    const worktreePath = join(repo.root, "..", `current-test-${suffix}`);
+
+    try {
+      await exec(["git", "worktree", "add", "-b", `current-branch-${suffix}`, worktreePath], repo.root);
+
+      // Run from main repo
+      const result = await wtree(["list"], repo.root);
+
+      expect(result.success).toBe(true);
+
+      const currentWt = result.worktrees.find((w: any) => w.current === true);
+      expect(currentWt).toBeDefined();
+      expect(currentWt.path).toBe(repo.root);
+
+      // Other worktrees should not be current
+      const otherWts = result.worktrees.filter((w: any) => w.current === false);
+      expect(otherWts.length).toBeGreaterThan(0);
+    } finally {
+      await rm(worktreePath, { recursive: true, force: true }).catch(() => {});
+    }
+  });
+});
+
+describe("integration: error scenarios", () => {
+  let repo: TestRepo;
+
+  afterEach(async () => {
+    if (repo) await repo.cleanup();
+  });
+
+  test("add fails when path already exists as non-empty directory", async () => {
+    repo = await createTestRepo({
+      "package.json": "{}",
+    });
+
+    const existingPath = join(repo.root, "..", `existing-dir-${Date.now()}`);
+    await mkdir(existingPath);
+    // Git worktree add fails on non-empty directories
+    await writeFile(join(existingPath, "file.txt"), "blocking file");
+
+    try {
+      const result = await wtree(["add", existingPath], repo.root);
+
+      expect(result.error).toBe(true);
+      expect(result.code).toBe("GIT_ERROR");
+    } finally {
+      await rm(existingPath, { recursive: true, force: true }).catch(() => {});
+    }
+  });
+
+  test("add fails with missing path argument", async () => {
+    repo = await createTestRepo({
+      "package.json": "{}",
+    });
+
+    const result = await wtree(["add"], repo.root);
+
+    expect(result.error).toBe(true);
+    expect(result.code).toBe("INVALID_ARGS");
+  });
+
+  test("restore fails with missing --from argument", async () => {
+    repo = await createTestRepo({
+      "pnpm-lock.yaml": "",
+    });
+
+    const result = await wtree(["restore", repo.root], repo.root);
+
+    expect(result.error).toBe(true);
+    expect(result.code).toBe("INVALID_ARGS");
+    expect(result.message).toContain("--from");
+  });
+
+  test("restore fails for non-existent source branch", async () => {
+    repo = await createTestRepo({
+      "pnpm-lock.yaml": "",
+    });
+
+    const result = await wtree(["restore", repo.root, "--from", "nonexistent-branch"], repo.root);
+
+    expect(result.error).toBe(true);
+    expect(result.code).toBe("WORKTREE_NOT_FOUND");
+  });
+
+  test("remove fails with missing path argument", async () => {
+    repo = await createTestRepo({
+      "package.json": "{}",
+    });
+
+    const result = await wtree(["remove"], repo.root);
+
+    expect(result.error).toBe(true);
+    expect(result.code).toBe("INVALID_ARGS");
+  });
+
+  test("remove fails for non-existent worktree", async () => {
+    repo = await createTestRepo({
+      "package.json": "{}",
+    });
+
+    const result = await wtree(["remove", "/nonexistent/path"], repo.root);
+
+    expect(result.error).toBe(true);
+    expect(result.code).toBe("WORKTREE_NOT_FOUND");
+  });
+
+  test("remove fails when trying to remove current worktree", async () => {
+    repo = await createTestRepo({
+      "package.json": "{}",
+    });
+
+    const result = await wtree(["remove", repo.root], repo.root);
+
+    expect(result.error).toBe(true);
+    expect(result.message).toContain("current worktree");
+  });
+
+  test("add handles standard path", async () => {
+    repo = await createTestRepo({
+      "bun.lock": "",
+      "package.json": "{}",
+    });
+
+    const worktreePath = join(repo.root, "..", `standard-path-${Date.now()}`);
+
+    try {
+      const result = await wtree(["add", worktreePath], repo.root);
+
+      // Git worktree add should handle paths
+      expect(result.success).toBe(true);
+      expect(result.worktree).toBeDefined();
+      expect(await exists(worktreePath)).toBe(true);
+    } finally {
+      await rm(worktreePath, { recursive: true, force: true }).catch(() => {});
+    }
+  });
+
+  test("add handles path with spaces in directory name", async () => {
+    repo = await createTestRepo({
+      "bun.lock": "",
+      "package.json": "{}",
+    });
+
+    // Create a parent directory with spaces
+    const parentWithSpaces = join(repo.root, "..", `parent dir ${Date.now()}`);
+    await mkdir(parentWithSpaces, { recursive: true });
+    const worktreePath = join(parentWithSpaces, "worktree");
+
+    try {
+      const result = await wtree(["add", worktreePath], repo.root);
+
+      expect(result.success).toBe(true);
+      expect(result.worktree).toBeDefined();
+      expect(await exists(worktreePath)).toBe(true);
+    } finally {
+      await rm(parentWithSpaces, { recursive: true, force: true }).catch(() => {});
+    }
+  });
+
+  test("remove can use branch name instead of path", async () => {
+    repo = await createTestRepo({
+      "package.json": "{}",
+    });
+
+    const suffix = Date.now();
+    const branchName = `branch-remove-${suffix}`;
+    const worktreePath = join(repo.root, "..", `path-${suffix}`);
+
+    try {
+      await exec(["git", "worktree", "add", "-b", branchName, worktreePath], repo.root);
+
+      // Remove by branch name
+      const result = await wtree(["remove", branchName], repo.root);
+
+      expect(result.success).toBe(true);
+      expect(await exists(worktreePath)).toBe(false);
+    } finally {
+      await rm(worktreePath, { recursive: true, force: true }).catch(() => {});
+    }
+  });
+});
+
+describe("integration: edge cases", () => {
+  let repo: TestRepo;
+
+  afterEach(async () => {
+    if (repo) await repo.cleanup();
+  });
+
+  test("handles detached HEAD worktree", async () => {
+    repo = await createTestRepo({
+      "package.json": "{}",
+    });
+
+    const suffix = Date.now();
+    const detachedPath = join(repo.root, "..", `detached-${suffix}`);
+
+    try {
+      // Get current commit hash
+      const hash = (await execCapture(["git", "rev-parse", "HEAD"], repo.root)).trim();
+
+      // Create detached worktree
+      await exec(["git", "worktree", "add", "--detach", detachedPath, hash], repo.root);
+
+      const result = await wtree(["list"], repo.root);
+
+      expect(result.success).toBe(true);
+      expect(result.worktrees.length).toBeGreaterThanOrEqual(2);
+
+      // One worktree should have a short hash as branch
+      const detached = result.worktrees.find((w: any) => w.path.includes("detached"));
+      expect(detached).toBeDefined();
+    } finally {
+      await rm(detachedPath, { recursive: true, force: true }).catch(() => {});
+    }
+  });
+
+  test("add from specific source worktree", async () => {
+    repo = await createTestRepo({
+      "pnpm-lock.yaml": "",
+      "package.json": "{}",
+    });
+
+    const suffix = Date.now();
+    const sourcePath = join(repo.root, "..", `source-${suffix}`);
+    const targetPath = join(repo.root, "..", `target-${suffix}`);
+
+    try {
+      // Create source worktree with node_modules
+      await exec(["git", "worktree", "add", "-b", `source-branch-${suffix}`, sourcePath], repo.root);
+      await mkdir(join(sourcePath, "node_modules"));
+      await writeFile(join(sourcePath, "node_modules", "from-source.js"), "source content");
+
+      // Create target worktree using --from source
+      const result = await wtree(["add", targetPath, "--from", `source-branch-${suffix}`], repo.root);
+
+      expect(result.success).toBe(true);
+      // Compare resolved paths to handle symlinks
+      const resolvedSourcePath = await resolvePath(sourcePath);
+      expect(result.source.path).toBe(resolvedSourcePath);
+
+      // Check artifacts were copied from source, not main
+      const content = await Bun.file(join(targetPath, "node_modules", "from-source.js")).text();
+      expect(content).toBe("source content");
+    } finally {
+      await rm(sourcePath, { recursive: true, force: true }).catch(() => {});
+      await rm(targetPath, { recursive: true, force: true }).catch(() => {});
+    }
+  });
+
+  test("handles project with no detectable config", async () => {
+    repo = await createTestRepo({
+      "README.md": "# Test",
+      "main.py": "print('hello')",
+    });
+
+    const result = await wtree(["analyze"], repo.root);
+
+    expect(result.success).toBe(true);
+    expect(result.detection.method).toBe("none");
+    expect(result.config).toBeNull();
+  });
+
+  test("handles .wtree.yaml with extends and custom cache", async () => {
+    repo = await createTestRepo({
+      ".wtree.yaml": "extends: pnpm\ncache:\n  - .next\n  - dist\n",
+      "pnpm-lock.yaml": "",
+      "package.json": "{}",
+    });
+
+    const result = await wtree(["analyze"], repo.root);
+
+    expect(result.success).toBe(true);
+    expect(result.detection.method).toBe("explicit");
+    expect(result.config.cache).toContain("node_modules"); // from pnpm
+    expect(result.config.cache).toContain(".next"); // custom
+    expect(result.config.cache).toContain("dist"); // custom
   });
 });
