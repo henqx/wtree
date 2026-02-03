@@ -64,8 +64,8 @@ The goal: **works for Node.js projects on macOS/Linux**.
 ### Python
 - [x] Recipe: uv
 - [x] Recipe: pip + venv
-- [ ] Recipe: poetry
-- [ ] Recipe: pdm
+- [x] Recipe: poetry
+- [x] Recipe: pdm
 
 ### Rust
 - [x] Recipe: Cargo
@@ -84,14 +84,14 @@ The goal: **works for Node.js projects on macOS/Linux**.
 ## v0.4.0 - Polish & Distribution
 
 ### Installation
-- [ ] Homebrew formula
-- [ ] Homebrew tap: `brew install wtree/tap/wtree`
+- [x] Homebrew formula
+- [x] Homebrew tap: `brew install anthropics/wtree/wtree`
 - [ ] Submit to homebrew-core (stretch)
 
 ### Developer Experience
 - [ ] `wtree init` - Generate .wtree.yaml interactively
 - [ ] `wtree doctor` - Diagnose common issues
-- [ ] Colored output
+- [x] Colored output
 - [ ] Progress indicators for long copies
 
 ### Documentation
@@ -109,7 +109,7 @@ The goal: **works for Node.js projects on macOS/Linux**.
 - [ ] Lockfile hash comparison (skip post_restore if unchanged)
 
 ### Advanced
-- [ ] `wtree list` - Show all worktrees with cache status
+- [x] `wtree list` - Show all worktrees with cache status
 - [ ] `wtree clean` - Remove orphaned cache artifacts
 - [ ] Worktree templates (pre-configured setups)
 

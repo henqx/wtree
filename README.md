@@ -19,8 +19,21 @@ wtree add ../feature-branch
 
 ## Installation
 
+### Homebrew (macOS/Linux)
+
 ```bash
-# Build from source (requires Bun)
+brew install anthropics/wtree/wtree
+```
+
+### Curl installer
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/anthropics/wtree/main/scripts/install.sh | bash
+```
+
+### Build from source (requires Bun)
+
+```bash
 git clone https://github.com/anthropics/wtree
 cd wtree
 bun install
@@ -48,6 +61,9 @@ wtree add ../feature-branch --from develop
 
 # Restore artifacts to an existing worktree
 wtree restore ./path/to/worktree --from ../main
+
+# List all worktrees with cache status
+wtree list
 
 # See what wtree detects in current directory
 wtree analyze
