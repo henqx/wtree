@@ -6,6 +6,7 @@
 2. **Thin wrapper** - Shell out to system tools (`git`, `cp`) for heavy lifting
 3. **Fast startup** - Bun compiled binary, minimal dependencies
 4. **Source worktree = cache** - No separate cache directory to manage
+5. **Match git semantics** - CLI mirrors `git worktree` patterns
 
 ## Overview
 
@@ -18,7 +19,7 @@
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                      Command Handlers                        │
-│  create, restore, analyze, remove                           │
+│  add, restore, analyze, remove                              │
 └─────────────────────────────────────────────────────────────┘
                               │
               ┌───────────────┼───────────────┐
@@ -32,7 +33,7 @@
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                     System Commands                          │
-│  git, cp -al, pnpm/npm/cargo/etc                            │
+│  git, cp -al/-Rl, sh -c (post_restore)                      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -41,144 +42,113 @@
 ```
 wtree/
 ├── src/
-│   ├── index.ts          # Entry point, CLI setup
-│   ├── cli.ts            # Argument parsing (minimal, use parseArgs)
+│   ├── index.ts          # Entry point, command dispatch
+│   ├── cli.ts            # Argument parsing (Bun's parseArgs)
 │   ├── commands/
-│   │   ├── create.ts     # Main command: create worktree + restore
+│   │   ├── add.ts        # Main command: create worktree + restore
 │   │   ├── restore.ts    # Restore artifacts to existing worktree
 │   │   ├── analyze.ts    # Show detected config
 │   │   └── remove.ts     # Remove worktree
 │   ├── detect/
-│   │   ├── index.ts      # Main detection orchestrator
+│   │   ├── index.ts      # Detection orchestrator (3-tier)
 │   │   ├── recipes.ts    # Built-in recipe definitions
 │   │   └── gitignore.ts  # .gitignore parser and inference
-│   ├── copy.ts           # Hardlink copy implementation
+│   ├── copy.ts           # Hardlink copy, glob expansion
 │   ├── git.ts            # Git command wrappers
 │   ├── config.ts         # .wtree.yaml parsing
 │   └── types.ts          # Shared type definitions
-├── scripts/
-│   └── install.sh        # curl installer script
+├── docs/
+│   ├── ARCHITECTURE.md
+│   └── ROADMAP.md
 ├── package.json
 ├── tsconfig.json
-├── README.md
-├── ARCHITECTURE.md
-└── ROADMAP.md
+└── README.md
 ```
 
 ## Core Components
 
 ### Detection (`src/detect/`)
 
-Detection runs on every command but is fast (~5ms) because it only reads top-level files.
+Three-tier detection priority:
 
-**Priority order:**
-1. `.wtree.yaml` - Explicit config, skip detection
-2. Built-in recipes - Match against lockfiles/markers
-3. `.gitignore` inference - Fallback for unknown stacks
+1. **Explicit config** - `.wtree.yaml` in repo root
+2. **Built-in recipes** - Match lockfiles/markers
+3. **Gitignore inference** - Fallback for unknown stacks
 
 ```typescript
 // src/detect/index.ts
-export async function detectConfig(root: string): Promise<Config> {
-  // 1. Check for explicit config
-  const configPath = path.join(root, ".wtree.yaml");
-  if (await exists(configPath)) {
-    return parseConfig(configPath);
+export async function detectConfig(root: string): Promise<DetectionResult> {
+  // Tier 1: Explicit .wtree.yaml
+  if (await fileExists(join(root, ".wtree.yaml"))) {
+    const config = await parseConfig(configPath);
+    return { method: "explicit", config };
   }
 
-  // 2. Try built-in recipes
-  const files = await readdir(root);
+  // Tier 2: Recipe matching
   for (const recipe of RECIPES) {
-    if (recipe.detect(files)) {
-      return recipe.config;
+    for (const detectFile of recipe.detect) {
+      if (await fileExists(join(root, detectFile))) {
+        return { method: "recipe", config: recipe.config, recipe: recipe.name };
+      }
     }
   }
 
-  // 3. Infer from .gitignore
-  return inferFromGitignore(root);
+  // Tier 3: Gitignore inference
+  const config = await inferFromGitignore(root);
+  if (config) {
+    return { method: "gitignore", config };
+  }
+
+  return { method: "none", config: null };
 }
 ```
 
 ### Recipes (`src/detect/recipes.ts`)
 
-Recipes are simple objects matching markers to cache config:
+Simple objects mapping markers to cache config:
 
 ```typescript
 interface Recipe {
   name: string;
-  detect: (files: string[]) => boolean;
-  config: Config;
-}
-
-interface Config {
-  cache: string[];           // Glob patterns to cache
-  post_restore?: string;      // Command to run after restore
+  detect: string[];      // Files that trigger this recipe
+  config: {
+    cache: string[];     // Glob patterns to cache
+    post_restore?: string;
+  };
 }
 
 const RECIPES: Recipe[] = [
   {
     name: "pnpm",
-    detect: (files) => files.includes("pnpm-lock.yaml"),
-    config: {
-      cache: ["node_modules"],
-      post_restore: "pnpm install --prefer-offline --frozen-lockfile",
-    },
+    detect: ["pnpm-lock.yaml"],
+    config: { cache: ["node_modules"] },
+  },
+  {
+    name: "bun",
+    detect: ["bun.lock", "bun.lockb"],
+    config: { cache: ["node_modules"] },
   },
   {
     name: "turborepo",
-    detect: (files) => files.includes("turbo.json"),
-    config: {
-      cache: ["node_modules", ".turbo", "**/node_modules"],
-      post_restore: "pnpm install --prefer-offline",
-    },
+    detect: ["turbo.json"],
+    config: { cache: ["node_modules", ".turbo", "**/node_modules"] },
   },
   // ... more recipes
 ];
 ```
 
-### Gitignore Inference (`src/detect/gitignore.ts`)
-
-Maps common gitignore patterns to cacheable directories:
-
-```typescript
-const GITIGNORE_HINTS: Record<string, CacheHint> = {
-  "node_modules": { cache: "node_modules", stack: "node" },
-  ".next": { cache: ".next/cache", stack: "nextjs" },
-  ".turbo": { cache: ".turbo", stack: "turborepo" },
-  ".venv": { cache: ".venv", stack: "python" },
-  "target": { cache: "target", stack: "rust" },
-  "__pycache__": { cache: "__pycache__", stack: "python" },
-  "vendor": { cache: "vendor", stack: "go" },
-};
-
-export function inferFromGitignore(root: string): Config {
-  const gitignore = readFileSync(path.join(root, ".gitignore"), "utf-8");
-  const lines = gitignore.split("\n").map((l) => l.trim().replace(/\/$/, ""));
-  
-  const cache: string[] = [];
-  for (const line of lines) {
-    const hint = GITIGNORE_HINTS[line];
-    if (hint) cache.push(hint.cache);
-  }
-  
-  return { cache, post_restore: undefined };
-}
-```
-
 ### Copy (`src/copy.ts`)
 
-Hardlink copy using system `cp`:
+Hardlink copy using system `cp` with platform detection:
 
 ```typescript
 export async function hardlinkCopy(src: string, dest: string): Promise<void> {
-  const proc = Bun.spawn(["cp", "-al", src, dest], {
-    stdout: "inherit",
-    stderr: "inherit",
-  });
-  
-  const exitCode = await proc.exited;
-  if (exitCode !== 0) {
-    throw new Error(`Failed to copy ${src} to ${dest}`);
-  }
+  // macOS: cp -Rl (recursive, hardlink)
+  // Linux: cp -al (archive, hardlink)
+  const isMacOS = process.platform === "darwin";
+  const flags = isMacOS ? ["-Rl"] : ["-al"];
+
+  await exec(["cp", ...flags, src, dest]);
 }
 
 export async function copyArtifacts(
@@ -187,28 +157,22 @@ export async function copyArtifacts(
   patterns: string[]
 ): Promise<string[]> {
   const copied: string[] = [];
-  
+
   for (const pattern of patterns) {
-    if (pattern.includes("**")) {
-      // Glob pattern - expand and copy each match
-      const matches = await glob(pattern, { cwd: sourceRoot });
-      for (const match of matches) {
-        await hardlinkCopy(
-          path.join(sourceRoot, match),
-          path.join(destRoot, match)
-        );
+    // Expand globs using Bun.Glob
+    const matches = await expandGlob(pattern, sourceRoot);
+
+    for (const match of deduplicatePaths(matches)) {
+      const src = join(sourceRoot, match);
+      const dest = join(destRoot, match);
+
+      if (await exists(src) && !(await exists(dest))) {
+        await hardlinkCopy(src, dest);
         copied.push(match);
-      }
-    } else {
-      // Direct path
-      const src = path.join(sourceRoot, pattern);
-      if (await exists(src)) {
-        await hardlinkCopy(src, path.join(destRoot, pattern));
-        copied.push(pattern);
       }
     }
   }
-  
+
   return copied;
 }
 ```
@@ -220,99 +184,85 @@ Thin wrappers around git commands:
 ```typescript
 export async function createWorktree(
   branch: string,
-  targetPath: string
+  targetPath: string,
+  options?: { baseBranch?: string; createBranch?: boolean; cwd?: string }
 ): Promise<void> {
-  await exec(["git", "worktree", "add", targetPath, "-b", branch]);
+  const args = ["git", "worktree", "add"];
+
+  if (options?.createBranch) {
+    // Check if branch exists, create with -b if not
+    const branchExists = await checkBranchExists(branch, options.cwd);
+    if (!branchExists) {
+      args.push("-b", branch, targetPath);
+      if (options.baseBranch) args.push(options.baseBranch);
+    } else {
+      args.push(targetPath, branch);
+    }
+  } else {
+    args.push(targetPath, branch);
+  }
+
+  await exec(args, { cwd: options?.cwd });
 }
 
-export async function removeWorktree(targetPath: string): Promise<void> {
-  await exec(["git", "worktree", "remove", targetPath]);
-}
-
-export async function getWorktreeRoot(): Promise<string> {
-  const result = await exec(["git", "rev-parse", "--show-toplevel"]);
-  return result.stdout.trim();
-}
-
-export async function listWorktrees(): Promise<Worktree[]> {
-  const result = await exec(["git", "worktree", "list", "--porcelain"]);
-  // Parse porcelain output
-  return parseWorktreeList(result.stdout);
-}
-```
-
-### CLI (`src/cli.ts`)
-
-Uses Bun's built-in `parseArgs` for simplicity:
-
-```typescript
-import { parseArgs } from "util";
-
-export function parse(args: string[]) {
-  const { values, positionals } = parseArgs({
-    args,
-    options: {
-      from: { type: "string", short: "f" },
-      json: { type: "boolean", default: false },
-      help: { type: "boolean", short: "h" },
-      version: { type: "boolean", short: "v" },
-    },
-    allowPositionals: true,
-  });
-
-  const [command, ...rest] = positionals;
-  return { command, args: rest, flags: values };
+export async function isPathIgnored(path: string, cwd?: string): Promise<boolean> {
+  try {
+    await exec(["git", "check-ignore", "-q", path], { cwd });
+    return true;
+  } catch {
+    return false;
+  }
 }
 ```
 
-## Data Flow: `wtree create feature-branch`
+## Data Flow: `wtree add .worktrees/feature-x`
 
 ```
 1. Parse CLI args
-   └─> command: "create", branch: "feature-branch", from: undefined
+   └─> path: ".worktrees/feature-x", branch: "feature-x" (inferred)
 
 2. Find source worktree
-   └─> git worktree list -> find main/current worktree path
+   └─> git worktree list -> current worktree
 
 3. Detect config from source
    └─> Check .wtree.yaml || match recipes || infer from .gitignore
-   └─> Result: { cache: ["node_modules", ".turbo"], post_restore: "pnpm install..." }
+   └─> Result: { cache: ["node_modules"], recipe: "bun" }
 
-4. Determine target path
-   └─> Default: ../repo-feature-branch (sibling directory)
+4. Check if nested worktree
+   └─> Path is inside repo -> check if gitignored
+   └─> Not ignored -> set warning message
 
 5. Create worktree
-   └─> git worktree add ../repo-feature-branch -b feature-branch
+   └─> git worktree add -b feature-x .worktrees/feature-x main
 
 6. Copy artifacts
-   └─> For each pattern in config.cache:
-       └─> cp -al source/node_modules target/node_modules
-       └─> cp -al source/.turbo target/.turbo
+   └─> cp -Rl source/node_modules .worktrees/feature-x/node_modules
 
-7. Run post_restore
-   └─> cd target && pnpm install --prefer-offline --frozen-lockfile
+7. Run post_restore (if defined)
+   └─> sh -c "pnpm install --prefer-offline"
 
 8. Output result
-   └─> { worktree: "/path/to/repo-feature-branch", cached: [...], ready: true }
+   └─> { success: true, worktree: {...}, artifacts: {...}, warning: "..." }
 ```
 
 ## Error Handling
 
-Keep it simple—fail fast with clear messages:
+Custom error class with codes for structured output:
 
 ```typescript
-class WtreeError extends Error {
-  constructor(message: string, public code: string) {
-    super(message);
-  }
+enum ErrorCode {
+  GIT_ERROR = "GIT_ERROR",
+  WORKTREE_EXISTS = "WORKTREE_EXISTS",
+  WORKTREE_NOT_FOUND = "WORKTREE_NOT_FOUND",
+  CONFIG_ERROR = "CONFIG_ERROR",
+  COPY_ERROR = "COPY_ERROR",
+  INVALID_ARGS = "INVALID_ARGS",
 }
 
-// Usage
-if (!await exists(sourceWorktree)) {
-  throw new WtreeError(
-    `Source worktree not found: ${sourceWorktree}`,
-    "SOURCE_NOT_FOUND"
-  );
+class WtreeError extends Error {
+  constructor(message: string, public code: ErrorCode) {
+    super(message);
+  }
 }
 ```
 
@@ -321,49 +271,28 @@ In JSON mode, errors are structured:
 ```json
 {
   "error": true,
-  "code": "SOURCE_NOT_FOUND",
-  "message": "Source worktree not found: /path/to/main"
+  "code": "WORKTREE_NOT_FOUND",
+  "message": "Source worktree not found: develop"
 }
-```
-
-## Testing Strategy
-
-1. **Unit tests** for detection logic (recipe matching, gitignore parsing)
-2. **Integration tests** using real git repos in temp directories
-3. **Snapshot tests** for CLI output formatting
-
-```typescript
-// Example test
-test("detects pnpm project", async () => {
-  const tmp = await createTempRepo({
-    "pnpm-lock.yaml": "",
-    "package.json": "{}",
-  });
-  
-  const config = await detectConfig(tmp);
-  
-  expect(config.cache).toContain("node_modules");
-  expect(config.post_restore).toContain("pnpm");
-});
 ```
 
 ## Build & Distribution
 
 ```bash
 # Development
-bun run src/index.ts create feature-branch
+bun run src/index.ts add ../feature-branch
 
 # Build single binary
 bun build src/index.ts --compile --outfile wtree
 
-# Build for multiple platforms (CI)
+# Build for multiple platforms
 bun build src/index.ts --compile --target=bun-linux-x64 --outfile dist/wtree-linux-x64
 bun build src/index.ts --compile --target=bun-darwin-arm64 --outfile dist/wtree-darwin-arm64
 ```
 
 ## Future Considerations
 
-- **Parallel copies**: For monorepos with many `node_modules`, parallelize the hardlink operations
+- **Parallel copies**: For monorepos with many `node_modules`, parallelize hardlink operations
 - **Copy-on-write**: On APFS/Btrfs, use `cp -c` for even faster copies
 - **Lockfile diffing**: Skip post_restore if lockfiles match exactly
-- **Remote caching**: Pull pre-built artifacts from CI cache (like Turborepo)
+- **Remote caching**: Pull pre-built artifacts from CI cache

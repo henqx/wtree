@@ -1,0 +1,33 @@
+{
+  "name": "wtree",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Accelerate git worktree creation with hardlinked build artifacts",
+  "main": "src/index.ts",
+  "bin": {
+    "wtree": "src/index.ts"
+  },
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "build": "bun build src/index.ts --compile --outfile wtree",
+    "build:linux-x64": "bun build src/index.ts --compile --target=bun-linux-x64 --outfile dist/wtree-linux-x64",
+    "build:darwin-arm64": "bun build src/index.ts --compile --target=bun-darwin-arm64 --outfile dist/wtree-darwin-arm64",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "bun-types": "^1.1.0",
+    "typescript": "^5.7.0"
+  },
+  "keywords": [
+    "git",
+    "worktree",
+    "cache",
+    "hardlink",
+    "cli"
+  ],
+  "license": "MIT"
+}

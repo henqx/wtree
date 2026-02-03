@@ -1,19 +1,21 @@
 # Roadmap
 
-## v0.1.0 - MVP (Week 1)
+## v0.1.0 - MVP
 
 The goal: **works for Node.js projects on macOS/Linux**.
 
 ### Core Commands
-- [x] `wtree create <branch>` - Create worktree with cached artifacts
-- [x] `wtree create <branch> --from <source>` - Explicit source worktree
-- [x] `wtree restore <path>` - Restore artifacts to existing worktree  
+- [x] `wtree add <path> [branch]` - Create worktree with cached artifacts
+- [x] `wtree add <path> --from <source>` - Explicit source worktree
+- [x] `wtree add -b <branch> <path>` - Create new branch explicitly
+- [x] `wtree restore <path>` - Restore artifacts to existing worktree
 - [x] `wtree analyze` - Show detected config
-- [x] `wtree remove <branch>` - Remove worktree
+- [x] `wtree remove <path>` - Remove worktree
+- [x] Nested worktree support with .gitignore warning
 
 ### Detection
 - [x] Recipe: pnpm
-- [x] Recipe: npm  
+- [x] Recipe: npm
 - [x] Recipe: yarn
 - [x] Basic .gitignore inference
 
@@ -26,26 +28,27 @@ The goal: **works for Node.js projects on macOS/Linux**.
 - [x] `--json` flag for agent integration
 
 ### Distribution
-- [x] Bun compiled binary
-- [x] curl install script
-- [x] npm package
+- [ ] Bun compiled binary
+- [ ] curl install script
+- [ ] npm package
 
 ---
 
-## v0.2.0 - Monorepo Support (Week 2)
+## v0.2.0 - Monorepo Support
 
 ### Detection
-- [ ] Recipe: Turborepo
-- [ ] Recipe: Nx
+- [x] Recipe: Turborepo
+- [x] Recipe: Nx
 - [ ] Recipe: Lerna
 - [ ] Recipe: pnpm workspaces (without turbo)
-- [ ] Glob pattern expansion (`**/node_modules`)
+- [ ] Recipe: Rush.js
+- [x] Glob pattern expansion (`**/node_modules`)
 
 ### Config
-- [ ] `.wtree.yaml` support
-- [ ] `extends` for built-in recipes
-- [ ] Custom `cache` patterns
-- [ ] Custom `post_restore` commands
+- [x] `.wtree.yaml` support
+- [x] `extends` for built-in recipes
+- [x] Custom `cache` patterns
+- [x] Custom `post_restore` commands
 
 ### Quality
 - [ ] Unit tests for detection
@@ -54,21 +57,21 @@ The goal: **works for Node.js projects on macOS/Linux**.
 
 ---
 
-## v0.3.0 - Multi-Language (Week 3-4)
+## v0.3.0 - Multi-Language
 
 ### Python
-- [ ] Recipe: uv
-- [ ] Recipe: pip + venv
+- [x] Recipe: uv
+- [x] Recipe: pip + venv
 - [ ] Recipe: poetry
 - [ ] Recipe: pdm
 
 ### Rust
-- [ ] Recipe: Cargo
+- [x] Recipe: Cargo
 - [ ] Incremental build cache handling
 
 ### Go
-- [ ] Recipe: Go modules
-- [ ] Vendor directory support
+- [x] Recipe: Go modules
+- [x] Vendor directory support
 
 ### Mixed Stacks
 - [ ] Detect multiple stacks in one repo
@@ -76,7 +79,7 @@ The goal: **works for Node.js projects on macOS/Linux**.
 
 ---
 
-## v0.4.0 - Polish & Distribution (Week 5)
+## v0.4.0 - Polish & Distribution
 
 ### Installation
 - [ ] Homebrew formula
@@ -96,7 +99,7 @@ The goal: **works for Node.js projects on macOS/Linux**.
 
 ---
 
-## v0.5.0 - Performance & Advanced Features (Week 6+)
+## v0.5.0 - Performance & Advanced Features
 
 ### Performance
 - [ ] Parallel hardlink operations for monorepos
@@ -107,10 +110,6 @@ The goal: **works for Node.js projects on macOS/Linux**.
 - [ ] `wtree list` - Show all worktrees with cache status
 - [ ] `wtree clean` - Remove orphaned cache artifacts
 - [ ] Worktree templates (pre-configured setups)
-
-### Integrations
-- [ ] GitHub Action for CI worktree caching
-- [ ] VS Code extension (create worktree from UI)
 
 ---
 
@@ -123,14 +122,19 @@ The goal: **works for Node.js projects on macOS/Linux**.
 - [ ] Documentation complete
 - [ ] Homebrew core accepted
 
+
+---
+
+## Future Ideas (Post v1.0)
+
 ### Windows Support
 - [ ] NTFS hardlink support
 - [ ] PowerShell install script
 - [ ] Test on Windows CI
 
----
-
-## Future Ideas (Post v1.0)
+### Integrations
+- [ ] GitHub Action for CI worktree caching
+- [ ] VS Code extension (create worktree from UI)
 
 ### Remote Caching
 Like Turborepo's remote cache, but for all artifacts:

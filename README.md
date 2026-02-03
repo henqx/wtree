@@ -11,8 +11,8 @@ When you create a git worktree, you get a fresh working directory—but `node_mo
 `wtree` hardlinks cached artifacts from your source worktree to new ones. Creating a worktree with a full `node_modules` takes seconds instead of minutes.
 
 ```bash
-# Create a new worktree with cached node_modules, .turbo, etc.
-wtree create feature-branch
+# Create a new worktree with cached node_modules
+wtree add ../feature-branch
 
 # That's it. Your new worktree is ready to use.
 ```
@@ -20,27 +20,31 @@ wtree create feature-branch
 ## Installation
 
 ```bash
-# curl (recommended)
-curl -fsSL https://wtree.dev/install.sh | bash
-
-# npm
-npm i -g wtree
-
-# bun
-bun i -g wtree
-
-# homebrew
-brew install wtree
+# Build from source (requires Bun)
+git clone https://github.com/anthropics/wtree
+cd wtree
+bun install
+bun run build
+sudo mv wtree /usr/local/bin/
 ```
 
 ## Usage
 
 ```bash
-# Create worktree with cached artifacts (auto-detects source)
-wtree create feature-branch
+# Create worktree (branch name inferred from path)
+wtree add ../feature-branch
 
-# Create from specific source branch/worktree
-wtree create feature-branch --from develop
+# Create worktree with explicit new branch name
+wtree add -b my-feature ../feature-branch
+
+# Checkout existing branch into new worktree
+wtree add ../hotfix main
+
+# Nested worktree pattern
+wtree add .worktrees/feature-x
+
+# Specify source worktree for artifacts
+wtree add ../feature-branch --from develop
 
 # Restore artifacts to an existing worktree
 wtree restore ./path/to/worktree --from ../main
@@ -48,11 +52,11 @@ wtree restore ./path/to/worktree --from ../main
 # See what wtree detects in current directory
 wtree analyze
 
-# Remove worktree and clean up
-wtree remove feature-branch
+# Remove worktree
+wtree remove ../feature-branch
 
 # Agent-friendly JSON output
-wtree create feature-branch --json
+wtree add ../feature-branch --json
 ```
 
 ## How It Works
@@ -73,8 +77,9 @@ Works out of the box with:
 | pnpm | `pnpm-lock.yaml` | `node_modules` |
 | npm | `package-lock.json` | `node_modules` |
 | yarn | `yarn.lock` | `node_modules`, `.yarn/cache` |
-| Turborepo | `turbo.json` | `node_modules`, `.turbo` |
-| Nx | `nx.json` | `node_modules`, `.nx/cache` |
+| Bun | `bun.lock`, `bun.lockb` | `node_modules` |
+| Turborepo | `turbo.json` | `node_modules`, `.turbo`, `**/node_modules` |
+| Nx | `nx.json` | `node_modules`, `.nx/cache`, `**/node_modules` |
 | Python (uv) | `uv.lock` | `.venv` |
 | Python (pip) | `requirements.txt` | `.venv` |
 | Rust | `Cargo.lock` | `target` |
@@ -105,22 +110,26 @@ post_restore: pnpm install --prefer-offline && pnpm build:packages
 `wtree` is designed for AI coding agents. Use `--json` for structured output:
 
 ```bash
-wtree create feature-branch --json
+wtree add ../feature-branch --json
 ```
 
 ```json
 {
-  "worktree": "/path/to/repo-feature-branch",
-  "cached": ["node_modules", ".turbo"],
-  "post_restore": { "ran": true, "exit_code": 0 },
-  "ready": true
+  "success": true,
+  "worktree": {
+    "path": "/path/to/feature-branch",
+    "branch": "feature-branch"
+  },
+  "source": {
+    "path": "/path/to/main",
+    "branch": "main"
+  },
+  "artifacts": {
+    "patterns": ["node_modules"],
+    "copied": ["node_modules"]
+  },
+  "recipe": "bun"
 }
-```
-
-For agent configs, a simple fallback pattern:
-
-```bash
-command -v wtree && wtree create $BRANCH || git worktree add ../$BRANCH
 ```
 
 ## Requirements
