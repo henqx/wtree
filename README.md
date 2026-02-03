@@ -97,7 +97,7 @@ Works out of the box with:
 | Bun | `bun.lock`, `bun.lockb` | `node_modules` |
 | Turborepo | `turbo.json` | `node_modules`, `.turbo`, `**/node_modules` |
 | Nx | `nx.json` | `node_modules`, `.nx/cache`, `**/node_modules` |
-| Rush | `rush.json` | `common/temp/node_modules`, `.rush/temp` |
+| Rush | `rush.json` | `common/temp/node_modules`, `.rush/temp`, `common/temp/build-cache` |
 | Lerna | `lerna.json` | `node_modules`, `**/node_modules` |
 | Python (uv) | `uv.lock` | `.venv` |
 | Python (Poetry) | `poetry.lock` | `.venv` |

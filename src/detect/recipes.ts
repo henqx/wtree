@@ -29,7 +29,7 @@ export const RECIPES: Recipe[] = [
     name: "rush",
     detect: ["rush.json"],
     config: {
-      cache: ["common/temp/node_modules", ".rush/temp"],
+      cache: ["common/temp/node_modules", ".rush/temp", "common/temp/build-cache"],
       post_restore: undefined,
     },
   },

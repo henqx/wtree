@@ -187,10 +187,11 @@ describe("recipes", () => {
       expect(go?.config.cache).toContain("vendor");
     });
 
-    test("rush caches common/temp/node_modules and .rush/temp", () => {
+    test("rush caches common/temp/node_modules, .rush/temp, and build-cache", () => {
       const rush = getRecipeByName("rush");
       expect(rush?.config.cache).toContain("common/temp/node_modules");
       expect(rush?.config.cache).toContain(".rush/temp");
+      expect(rush?.config.cache).toContain("common/temp/build-cache");
     });
 
     test("pnpm-workspaces caches node_modules and nested node_modules", () => {
