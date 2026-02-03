@@ -200,6 +200,21 @@ describe("integration: analyze", () => {
     expect(result.config.cache).toContain(".rush/temp");
   });
 
+  test("detects pnpm workspaces project", async () => {
+    repo = await createTestRepo({
+      "pnpm-workspace.yaml": "packages:\n  - 'packages/*'\n",
+      "pnpm-lock.yaml": "",
+      "package.json": "{}",
+    });
+
+    const result = await wtree(["analyze"], repo.root);
+
+    expect(result.success).toBe(true);
+    expect(result.detection.recipe).toBe("pnpm-workspaces");
+    expect(result.config.cache).toContain("node_modules");
+    expect(result.config.cache).toContain("**/node_modules");
+  });
+
   test("uses explicit .wtree.yaml config", async () => {
     repo = await createTestRepo({
       ".wtree.yaml": "cache:\n  - custom-cache\n  - another-dir\n",

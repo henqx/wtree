@@ -100,6 +100,7 @@ All commands support `--json` flag for agent integration with structured output.
 | Stack | Detection File | Cached Artifacts |
 |-------|----------------|------------------|
 | pnpm | `pnpm-lock.yaml` | `node_modules` |
+| pnpm workspaces | `pnpm-workspace.yaml` | `node_modules`, `**/node_modules` |
 | npm | `package-lock.json` | `node_modules` |
 | yarn | `yarn.lock` | `node_modules`, `.yarn/cache` |
 | Bun | `bun.lock`, `bun.lockb` | `node_modules` |

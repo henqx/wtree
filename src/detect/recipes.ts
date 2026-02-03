@@ -34,6 +34,16 @@ export const RECIPES: Recipe[] = [
     },
   },
 
+  // pnpm workspaces (check before plain pnpm)
+  {
+    name: "pnpm-workspaces",
+    detect: ["pnpm-workspace.yaml"],
+    config: {
+      cache: ["node_modules", "**/node_modules"],
+      post_restore: undefined,
+    },
+  },
+
   // pnpm
   {
     name: "pnpm",

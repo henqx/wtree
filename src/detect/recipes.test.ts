@@ -6,6 +6,7 @@ describe("recipes", () => {
     test("has all expected recipes", () => {
       const names = RECIPES.map((r) => r.name);
       expect(names).toContain("pnpm");
+      expect(names).toContain("pnpm-workspaces");
       expect(names).toContain("npm");
       expect(names).toContain("yarn");
       expect(names).toContain("bun");
@@ -51,6 +52,13 @@ describe("recipes", () => {
       const pnpmIndex = RECIPES.findIndex((r) => r.name === "pnpm");
 
       expect(rushIndex).toBeLessThan(pnpmIndex);
+    });
+
+    test("pnpm-workspaces is checked before plain pnpm", () => {
+      const workspacesIndex = RECIPES.findIndex((r) => r.name === "pnpm-workspaces");
+      const pnpmIndex = RECIPES.findIndex((r) => r.name === "pnpm");
+
+      expect(workspacesIndex).toBeLessThan(pnpmIndex);
     });
   });
 
@@ -109,6 +117,11 @@ describe("recipes", () => {
       const rush = getRecipeByName("rush");
       expect(rush?.detect).toContain("rush.json");
     });
+
+    test("pnpm-workspaces detects pnpm-workspace.yaml", () => {
+      const pnpmWs = getRecipeByName("pnpm-workspaces");
+      expect(pnpmWs?.detect).toContain("pnpm-workspace.yaml");
+    });
   });
 
   describe("recipe cache patterns", () => {
@@ -147,6 +160,12 @@ describe("recipes", () => {
       const rush = getRecipeByName("rush");
       expect(rush?.config.cache).toContain("common/temp/node_modules");
       expect(rush?.config.cache).toContain(".rush/temp");
+    });
+
+    test("pnpm-workspaces caches node_modules and nested node_modules", () => {
+      const pnpmWs = getRecipeByName("pnpm-workspaces");
+      expect(pnpmWs?.config.cache).toContain("node_modules");
+      expect(pnpmWs?.config.cache).toContain("**/node_modules");
     });
   });
 });
