@@ -21,3 +21,6 @@ Thumbs.db
 
 # Bun
 bun.lockb
+
+# Standard git worktrees
+.worktrees/
