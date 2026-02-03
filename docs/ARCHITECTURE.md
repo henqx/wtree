@@ -19,7 +19,7 @@
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                      Command Handlers                        │
-│  add, restore, analyze, remove                              │
+│  add, restore, analyze, list, remove                        │
 └─────────────────────────────────────────────────────────────┘
                               │
               ┌───────────────┼───────────────┐
@@ -44,10 +44,12 @@ wtree/
 ├── src/
 │   ├── index.ts          # Entry point, command dispatch
 │   ├── cli.ts            # Argument parsing (Bun's parseArgs)
+│   ├── color.ts          # ANSI color utilities for terminal output
 │   ├── commands/
 │   │   ├── add.ts        # Main command: create worktree + restore
 │   │   ├── restore.ts    # Restore artifacts to existing worktree
 │   │   ├── analyze.ts    # Show detected config
+│   │   ├── list.ts       # List worktrees with cache status
 │   │   └── remove.ts     # Remove worktree
 │   ├── detect/
 │   │   ├── index.ts      # Detection orchestrator (3-tier)

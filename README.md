@@ -100,6 +100,8 @@ Works out of the box with:
 | Rush | `rush.json` | `common/temp/node_modules`, `.rush/temp` |
 | Lerna | `lerna.json` | `node_modules`, `**/node_modules` |
 | Python (uv) | `uv.lock` | `.venv` |
+| Python (Poetry) | `poetry.lock` | `.venv` |
+| Python (PDM) | `pdm.lock` | `.venv`, `__pypackages__` |
 | Python (pip) | `requirements.txt` | `.venv` |
 | Rust | `Cargo.lock` | `target` |
 | Go | `go.sum` | `vendor` |

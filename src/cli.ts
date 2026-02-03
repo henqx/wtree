@@ -129,7 +129,8 @@ CONFIGURATION:
     post_restore: pnpm install --frozen-lockfile
 
 RECIPES:
-  pnpm, pnpm-workspaces, npm, yarn, bun, turborepo, nx, rush, lerna, python-uv, python-pip, rust, go
+  pnpm, pnpm-workspaces, npm, yarn, bun, turborepo, nx, rush, lerna,
+  python-uv, poetry, pdm, python-pip, rust, go
 `);
 }
 
