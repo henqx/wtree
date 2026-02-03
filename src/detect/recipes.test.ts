@@ -13,6 +13,7 @@ describe("recipes", () => {
       expect(names).toContain("turborepo");
       expect(names).toContain("nx");
       expect(names).toContain("rush");
+      expect(names).toContain("lerna");
       expect(names).toContain("python-uv");
       expect(names).toContain("python-pip");
       expect(names).toContain("rust");
@@ -59,6 +60,13 @@ describe("recipes", () => {
       const pnpmIndex = RECIPES.findIndex((r) => r.name === "pnpm");
 
       expect(workspacesIndex).toBeLessThan(pnpmIndex);
+    });
+
+    test("lerna is checked before pnpm/npm/yarn", () => {
+      const lernaIndex = RECIPES.findIndex((r) => r.name === "lerna");
+      const pnpmIndex = RECIPES.findIndex((r) => r.name === "pnpm");
+
+      expect(lernaIndex).toBeLessThan(pnpmIndex);
     });
   });
 
@@ -122,6 +130,11 @@ describe("recipes", () => {
       const pnpmWs = getRecipeByName("pnpm-workspaces");
       expect(pnpmWs?.detect).toContain("pnpm-workspace.yaml");
     });
+
+    test("lerna detects lerna.json", () => {
+      const lerna = getRecipeByName("lerna");
+      expect(lerna?.detect).toContain("lerna.json");
+    });
   });
 
   describe("recipe cache patterns", () => {
@@ -166,6 +179,12 @@ describe("recipes", () => {
       const pnpmWs = getRecipeByName("pnpm-workspaces");
       expect(pnpmWs?.config.cache).toContain("node_modules");
       expect(pnpmWs?.config.cache).toContain("**/node_modules");
+    });
+
+    test("lerna caches node_modules and nested node_modules", () => {
+      const lerna = getRecipeByName("lerna");
+      expect(lerna?.config.cache).toContain("node_modules");
+      expect(lerna?.config.cache).toContain("**/node_modules");
     });
   });
 });

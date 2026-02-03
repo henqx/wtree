@@ -39,7 +39,7 @@ The goal: **works for Node.js projects on macOS/Linux**.
 ### Detection
 - [x] Recipe: Turborepo
 - [x] Recipe: Nx
-- [ ] Recipe: Lerna
+- [x] Recipe: Lerna
 - [x] Recipe: pnpm workspaces (without turbo)
 - [x] Recipe: Rush.js
 - [x] Glob pattern expansion (`**/node_modules`)

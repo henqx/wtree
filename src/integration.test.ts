@@ -215,6 +215,20 @@ describe("integration: analyze", () => {
     expect(result.config.cache).toContain("**/node_modules");
   });
 
+  test("detects lerna project", async () => {
+    repo = await createTestRepo({
+      "lerna.json": '{"version": "1.0.0"}',
+      "package.json": "{}",
+    });
+
+    const result = await wtree(["analyze"], repo.root);
+
+    expect(result.success).toBe(true);
+    expect(result.detection.recipe).toBe("lerna");
+    expect(result.config.cache).toContain("node_modules");
+    expect(result.config.cache).toContain("**/node_modules");
+  });
+
   test("uses explicit .wtree.yaml config", async () => {
     repo = await createTestRepo({
       ".wtree.yaml": "cache:\n  - custom-cache\n  - another-dir\n",

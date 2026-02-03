@@ -107,6 +107,7 @@ All commands support `--json` flag for agent integration with structured output.
 | Turborepo | `turbo.json` | `node_modules`, `.turbo`, `**/node_modules` |
 | Nx | `nx.json` | `node_modules`, `.nx/cache`, `**/node_modules` |
 | Rush | `rush.json` | `common/temp/node_modules`, `.rush/temp` |
+| Lerna | `lerna.json` | `node_modules`, `**/node_modules` |
 | Python (uv) | `uv.lock` | `.venv` |
 | Python (pip) | `requirements.txt` | `.venv` |
 | Rust | `Cargo.lock` | `target` |

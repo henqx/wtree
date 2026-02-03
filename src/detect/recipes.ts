@@ -34,6 +34,16 @@ export const RECIPES: Recipe[] = [
     },
   },
 
+  // Lerna monorepo
+  {
+    name: "lerna",
+    detect: ["lerna.json"],
+    config: {
+      cache: ["node_modules", "**/node_modules"],
+      post_restore: undefined,
+    },
+  },
+
   // pnpm workspaces (check before plain pnpm)
   {
     name: "pnpm-workspaces",
